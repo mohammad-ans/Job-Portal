@@ -1,70 +1,116 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router";
-import { 
-  ShieldCheck, 
-  Check, 
-  X, 
+import { api } from "../lib/api";
+import { toast } from "sonner";
+import {
+  ShieldCheck,
+  Check,
+  X,
   Activity,
   AlertTriangle,
   Building,
   GraduationCap,
   Database,
-  Users,
   Briefcase,
   Bot
 } from "lucide-react";
 
-const MOCK_PENDING_APPROVALS = [
-  {
-    id: 1,
-    type: 'company',
-    name: "Quantum Analytics",
-    details: "Tech Startup • Registration Doc #4421",
-    date: "10 mins ago",
-    aiConfidence: 98,
-    flags: 0
-  },
-  {
-    id: 2,
-    type: 'job',
-    name: "Data Scientist (Fresh)",
-    details: "Posted by Nexus Tech • Check JD compliance",
-    date: "45 mins ago",
-    aiConfidence: 100,
-    flags: 0
-  },
-  {
-    id: 3,
-    type: 'student_verification',
-    name: "Hassan Ali - BSCS",
-    details: "FAST-NU • Uploaded Academic Transcript",
-    date: "2 hours ago",
-    aiConfidence: 65,
-    flags: 1,
-    flagReason: "Transcript image blur detected"
-  }
-];
+interface Stats {
+  total_students: number;
+  total_employers: number;
+  active_jobs: number;
+  total_matches: number;
+}
+
+interface Approval {
+  id: string;
+  target_type: string;
+  target_id: string;
+  name: string;
+  details: string | null;
+  ai_confidence: number;
+  flags: number;
+  flag_reason: string | null;
+  status: string;
+  created_at: string;
+}
+
+interface SystemLog {
+  id: string;
+  action: string;
+  actor_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+function logType(action: string): "info" | "success" | "warn" {
+  if (action.toLowerCase().includes("approved")) return "success";
+  if (action.toLowerCase().includes("rejected") || action.toLowerCase().includes("anomaly")) return "warn";
+  return "info";
+}
 
 export function AdminConsole() {
   const { user } = useAuth();
-  const [approvals, setApprovals] = useState(MOCK_PENDING_APPROVALS);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAction = (id: number) => {
-    setApprovals(prev => prev.filter(item => item.id !== id));
+  useEffect(() => {
+    if (!user || user.role !== "admin") return;
+    Promise.all([
+      api.get<Stats>("/api/v1/admin/stats"),
+      api.get<{ items: Approval[]; total: number }>("/api/v1/admin/approvals"),
+      api.get<{ items: SystemLog[] }>("/api/v1/admin/logs"),
+    ])
+      .then(([s, a, l]) => {
+        setStats(s);
+        setApprovals(a.items);
+        setLogs(l.items);
+      })
+      .catch(() => toast.error("Failed to load admin data"))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const handleApprove = async (id: string) => {
+    try {
+      await api.post(`/api/v1/admin/approvals/${id}/approve`);
+      setApprovals((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Approved successfully");
+    } catch {
+      toast.error("Failed to approve");
+    }
   };
 
-  if (!user || user.role !== 'admin') {
+  const handleReject = async (id: string) => {
+    try {
+      await api.post(`/api/v1/admin/approvals/${id}/reject`, { reason: "Rejected by admin" });
+      setApprovals((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Rejected");
+    } catch {
+      toast.error("Failed to reject");
+    }
+  };
+
+  if (!user || user.role !== "admin") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-         <ShieldCheck size={64} className="text-slate-300 mb-6" />
-         <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
-         <p className="text-slate-500 max-w-md mb-8">System overview and moderation features are restricted to verified administrators.</p>
-         <Link to="/login" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-all">Admin Login</Link>
+        <ShieldCheck size={64} className="text-slate-300 mb-6" />
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
+        <p className="text-slate-500 max-w-md mb-8">System overview and moderation features are restricted to verified administrators.</p>
+        <Link to="/login" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-all">Admin Login</Link>
       </div>
     );
   }
+
+  const statCards = stats ? [
+    { label: "Verified Students", value: stats.total_students.toLocaleString(), icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
+    { label: "Verified Employers", value: stats.total_employers.toLocaleString(), icon: Building, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
+    { label: "Active Job Listings", value: stats.active_jobs.toLocaleString(), icon: Briefcase, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
+    { label: "Total Matches Made", value: stats.total_matches.toLocaleString(), icon: Database, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" },
+  ] : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
@@ -86,28 +132,27 @@ export function AdminConsole() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {[
-          { label: "Verified Students", value: "12,504", icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
-          { label: "Verified Employers", value: "842", icon: Building, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
-          { label: "Active Job Listings", value: "3,190", icon: Briefcase, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
-          { label: "Total Matches Made", value: "45.2k", icon: Database, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" }
-        ].map((stat, i) => (
-          <div key={i} className={`bg-white rounded-3xl p-6 border ${stat.border} shadow-sm flex flex-col`}>
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                <stat.icon size={24} />
+        {loading
+          ? [...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm animate-pulse h-32" />
+            ))
+          : statCards.map((stat, i) => (
+              <div key={i} className={`bg-white rounded-3xl p-6 border ${stat.border} shadow-sm flex flex-col`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                    <stat.icon size={24} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
-            </div>
-          </div>
-        ))}
+            ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Verification Queue */}
         <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col min-h-[500px]">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -123,8 +168,14 @@ export function AdminConsole() {
           {approvals.length === 0 ? (
             <div className="flex-grow flex flex-col items-center justify-center p-12 text-center text-slate-500">
               <ShieldCheck size={64} className="mb-4 text-slate-200" />
-              <p className="text-xl font-bold text-slate-700">Inbox Zero!</p>
-              <p className="text-sm mt-2 max-w-xs">All entities have been verified. The ecosystem is clean and secure.</p>
+              <p className="text-xl font-bold text-slate-700">
+                {loading ? "Loading…" : "Inbox Zero!"}
+              </p>
+              <p className="text-sm mt-2 max-w-xs">
+                {loading
+                  ? "Fetching pending approvals."
+                  : "All entities have been verified. The ecosystem is clean and secure."}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 flex-grow">
@@ -138,15 +189,15 @@ export function AdminConsole() {
                   >
                     <div className="flex items-start gap-4">
                       <div className={`p-3 rounded-2xl flex-shrink-0 ${
-                        item.type === 'company' ? 'bg-blue-100 text-blue-600' :
-                        item.type === 'job' ? 'bg-indigo-100 text-indigo-600' :
-                        'bg-emerald-100 text-emerald-600'
+                        item.target_type === "company" ? "bg-blue-100 text-blue-600" :
+                        item.target_type === "job" ? "bg-indigo-100 text-indigo-600" :
+                        "bg-emerald-100 text-emerald-600"
                       }`}>
-                        {item.type === 'company' && <Building size={24} />}
-                        {item.type === 'job' && <Briefcase size={24} />}
-                        {item.type === 'student_verification' && <GraduationCap size={24} />}
+                        {item.target_type === "company" && <Building size={24} />}
+                        {item.target_type === "job" && <Briefcase size={24} />}
+                        {item.target_type === "student_verification" && <GraduationCap size={24} />}
                       </div>
-                      
+
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-slate-900 text-lg">{item.name}</h3>
@@ -156,22 +207,23 @@ export function AdminConsole() {
                             </span>
                           )}
                         </div>
-                        <p className="text-slate-600 text-sm font-medium">{item.details}</p>
-                        
-                        {item.flagReason && (
+                        {item.details && (
+                          <p className="text-slate-600 text-sm font-medium">{item.details}</p>
+                        )}
+                        {item.flag_reason && (
                           <p className="text-xs text-rose-600 mt-2 font-medium flex items-center gap-1">
-                            <AlertTriangle size={12} /> {item.flagReason}
+                            <AlertTriangle size={12} /> {item.flag_reason}
                           </p>
                         )}
-                        
+
                         <div className="flex items-center gap-3 mt-3">
                           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider bg-slate-100 px-2 py-1 rounded">
-                            {item.date}
+                            {new Date(item.created_at).toLocaleString()}
                           </span>
                           <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                            <Bot size={12} /> AI Confidence: 
-                            <span className={item.aiConfidence > 90 ? 'text-emerald-500' : 'text-amber-500'}>
-                              {item.aiConfidence}%
+                            <Bot size={12} /> AI Confidence:
+                            <span className={item.ai_confidence > 90 ? "text-emerald-500" : "text-amber-500"}>
+                              {item.ai_confidence}%
                             </span>
                           </span>
                         </div>
@@ -179,15 +231,15 @@ export function AdminConsole() {
                     </div>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                      <button 
-                        onClick={() => handleAction(item.id)}
+                      <button
+                        onClick={() => handleReject(item.id)}
                         className="flex-1 sm:flex-none flex items-center justify-center p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-medium border border-transparent hover:border-rose-200"
                         title="Reject"
                       >
                         <X size={20} />
                       </button>
-                      <button 
-                        onClick={() => handleAction(item.id)}
+                      <button
+                        onClick={() => handleApprove(item.id)}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all shadow-md font-bold text-sm"
                       >
                         <Check size={18} /> Approve
@@ -206,29 +258,29 @@ export function AdminConsole() {
             <Activity size={20} className="text-indigo-400" />
             Live System Logs
           </h2>
-          
+
           <div className="space-y-4 font-mono text-xs flex-grow overflow-y-auto pr-2 custom-scrollbar">
-            {[
-              { time: "14:23:01", msg: "NLP Engine vectorized new JD (ID: #4092)", type: "info" },
-              { time: "14:22:45", msg: "Cron job: Matched 42 students to Job #4091", type: "success" },
-              { time: "14:20:12", msg: "Auth anomaly detected from IP 192.168.x.x", type: "warn" },
-              { time: "14:15:30", msg: "User profile #9928 uploaded new resume", type: "info" },
-              { time: "14:10:05", msg: "Database backup completed successfully", type: "success" },
-              { time: "14:05:22", msg: "New employer registered: TechFlow Solutions", type: "info" },
-              { time: "13:50:11", msg: "API Rate limit approaching for /nlp-parse", type: "warn" },
-            ].map((log, i) => (
-              <div key={i} className="flex gap-3 items-start border-l-2 border-slate-800 pl-3">
-                <span className="text-slate-500 shrink-0">{log.time}</span>
-                <span className={`${
-                  log.type === 'success' ? 'text-emerald-400' :
-                  log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'
-                }`}>
-                  {log.msg}
-                </span>
-              </div>
-            ))}
+            {loading ? (
+              <p className="text-slate-500 text-center pt-8">Loading logs…</p>
+            ) : logs.length === 0 ? (
+              <p className="text-slate-500 text-center pt-8">No logs yet.</p>
+            ) : (
+              logs.map((log) => (
+                <div key={log.id} className="flex gap-3 items-start border-l-2 border-slate-800 pl-3">
+                  <span className="text-slate-500 shrink-0">
+                    {new Date(log.created_at).toLocaleTimeString()}
+                  </span>
+                  <span className={
+                    logType(log.action) === "success" ? "text-emerald-400" :
+                    logType(log.action) === "warn" ? "text-amber-400" : "text-slate-300"
+                  }>
+                    {log.action}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
-          
+
           <div className="mt-6 pt-6 border-t border-slate-800 text-[10px] text-slate-500 text-center uppercase tracking-widest font-bold">
             End of Log
           </div>

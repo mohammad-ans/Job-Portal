@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gradmatch
+      POSTGRES_USER: gradmatch
+      POSTGRES_PASSWORD: gradmatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gradmatch -d gradmatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://gradmatch:gradmatch@db:5432/gradmatch
+      JWT_SECRET: super-secret-change-me-in-production
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    # Hot-reload on code changes (requires Docker Compose v2.22+)
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+          ignore:
+            - __pycache__
+            - "*.pyc"
+        - action: sync
+          path: ./alembic
+          target: /app/alembic
+        - action: rebuild
+          path: pyproject.toml
+        - action: rebuild
+          path: Dockerfile
+
+volumes:
+  postgres_data:

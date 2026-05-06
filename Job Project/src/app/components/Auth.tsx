@@ -2,25 +2,59 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
-import { Briefcase, GraduationCap, ShieldCheck, Mail, Lock, User, Building, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { GraduationCap, ShieldCheck, Mail, Lock, User, Building, ArrowRight, AlertCircle } from "lucide-react";
+
+const DEMO: Record<string, { email: string; password: string }> = {
+  student: { email: "usman@example.com", password: "Demo1234!" },
+  employer: { email: "sarah@nexus.tech", password: "Demo1234!" },
+  admin: { email: "admin@gradmatch.ai", password: "Demo1234!" },
+};
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleDemoLogin = (role: "student" | "employer" | "admin") => {
-    login(role);
-    if (role === 'student') navigate('/student');
-    else if (role === 'employer') navigate('/employer');
-    else navigate('/admin');
+  const doLogin = async (e: string, p: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      await login(e, p);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
+      toast.error(err instanceof Error ? err.message : "Login failed");
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
   };
 
-  const handleFormLogin = (e: React.FormEvent) => {
+  const handleDemoLogin = async (role: "student" | "employer" | "admin") => {
+    await doLogin(DEMO[role].email, DEMO[role].password);
+    if (role === "student") navigate("/student");
+    else if (role === "employer") navigate("/employer");
+    else navigate("/admin");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Fallback to student login for generic demo purposes
-    handleDemoLogin('student');
+    setLoading(true);
+    setError("");
+    try {
+      await login(email, password);
+      toast.success("Logged in successfully");
+      navigate("/");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Login failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,42 +68,54 @@ export function Login() {
           <p className="text-slate-500">Log in to access your personalized dashboard.</p>
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl shadow-slate-200/50"
         >
-          {/* Quick Demo Logins */}
           <div className="mb-8">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">Fast Demo Logins</p>
             <div className="grid grid-cols-3 gap-3">
-              <button onClick={() => handleDemoLogin('student')} className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors border border-blue-100">
-                <GraduationCap size={24} className="mb-2" />
-                <span className="text-xs font-bold">Student</span>
-              </button>
-              <button onClick={() => handleDemoLogin('employer')} className="flex flex-col items-center justify-center p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors border border-indigo-100">
-                <Building size={24} className="mb-2" />
-                <span className="text-xs font-bold">Employer</span>
-              </button>
-              <button onClick={() => handleDemoLogin('admin')} className="flex flex-col items-center justify-center p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-colors border border-emerald-100">
-                <ShieldCheck size={24} className="mb-2" />
-                <span className="text-xs font-bold">Admin</span>
-              </button>
+              {(["student", "employer", "admin"] as const).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => handleDemoLogin(role)}
+                  disabled={loading}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl transition-colors border disabled:opacity-50 ${
+                    role === "student" ? "bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100" :
+                    role === "employer" ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-100" :
+                    "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-100"
+                  }`}
+                >
+                  {role === "student" ? <GraduationCap size={24} className="mb-2" /> :
+                   role === "employer" ? <Building size={24} className="mb-2" /> :
+                   <ShieldCheck size={24} className="mb-2" />}
+                  <span className="text-xs font-bold capitalize">{role}</span>
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="relative flex items-center py-5">
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-slate-200" />
             <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-medium">Or continue with email</span>
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-slate-200" />
           </div>
 
-          <form onSubmit={handleFormLogin} className="space-y-5">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm font-medium">
+              <AlertCircle size={16} /> {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="you@example.com" />
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="you@example.com" />
               </div>
             </div>
             <div>
@@ -79,16 +125,20 @@ export function Login() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="••••••••" />
+                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="••••••••" />
               </div>
             </div>
-            <button type="submit" className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors mt-2 shadow-md flex items-center justify-center gap-2">
-              Sign In <ArrowRight size={18} />
+            <button type="submit" disabled={loading}
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors mt-2 shadow-md flex items-center justify-center gap-2 disabled:opacity-50">
+              {loading ? "Signing in…" : <>Sign In <ArrowRight size={18} /></>}
             </button>
           </form>
-          
+
           <p className="text-center mt-8 text-sm text-slate-500 font-medium">
-            Don't have an account? <Link to="/signup" className="text-indigo-600 font-bold hover:text-indigo-700">Sign Up</Link>
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-indigo-600 font-bold hover:text-indigo-700">Sign Up</Link>
           </p>
         </motion.div>
       </div>
@@ -97,15 +147,31 @@ export function Login() {
 }
 
 export function SignUp() {
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const [role, setRole] = useState<"student" | "employer">("student");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleDemoSignup = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(role);
-    if (role === 'student') navigate('/student');
-    else navigate('/employer');
+    setLoading(true);
+    setError("");
+    try {
+      await signup({ name, email, password, role, ...(role === "employer" ? { company_name: company } : {}) });
+      toast.success("Account created! Awaiting admin verification.");
+      navigate(role === "student" ? "/student" : "/employer");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Signup failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,42 +182,47 @@ export function SignUp() {
           <p className="text-slate-500">Join GradMatch AI and start hiring or getting hired.</p>
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl shadow-slate-200/50"
         >
-          {/* Role Selection */}
           <div className="flex p-1 bg-slate-100 rounded-xl mb-8">
-            <button 
-              onClick={() => setRole('student')}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${role === 'student' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
+            <button onClick={() => setRole("student")}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${role === "student" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               <GraduationCap size={18} /> I'm a Student
             </button>
-            <button 
-              onClick={() => setRole('employer')}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${role === 'employer' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
+            <button onClick={() => setRole("employer")}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${role === "employer" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               <Building size={18} /> I'm an Employer
             </button>
           </div>
 
-          <form onSubmit={handleDemoSignup} className="space-y-5">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm font-medium">
+              <AlertCircle size={16} /> {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input required type="text" className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="John Doe" />
+                <input required type="text" value={name} onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="John Doe" />
               </div>
             </div>
-            
-            {role === 'employer' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+
+            {role === "employer" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                 <label className="block text-sm font-bold text-slate-700 mb-2 mt-5">Company Name</label>
                 <div className="relative">
                   <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input required type="text" className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="TechFlow Solutions" />
+                  <input required type="text" value={company} onChange={(e) => setCompany(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    placeholder="TechFlow Solutions" />
                 </div>
               </motion.div>
             )}
@@ -160,24 +231,30 @@ export function SignUp() {
               <label className="block text-sm font-bold text-slate-700 mb-2 mt-5">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input required type="email" className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="you@example.com" />
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="you@example.com" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 mt-5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input required type="password" className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Create a strong password" />
+                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="Create a strong password" />
               </div>
             </div>
-            
-            <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors mt-8 shadow-md shadow-indigo-200 flex items-center justify-center gap-2">
-              Create Account <ArrowRight size={18} />
+
+            <button type="submit" disabled={loading}
+              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors mt-8 shadow-md shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50">
+              {loading ? "Creating account…" : <>Create Account <ArrowRight size={18} /></>}
             </button>
           </form>
-          
+
           <p className="text-center mt-8 text-sm text-slate-500 font-medium">
-            Already have an account? <Link to="/login" className="text-indigo-600 font-bold hover:text-indigo-700">Log In</Link>
+            Already have an account?{" "}
+            <Link to="/login" className="text-indigo-600 font-bold hover:text-indigo-700">Log In</Link>
           </p>
         </motion.div>
       </div>

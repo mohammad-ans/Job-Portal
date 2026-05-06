@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation, Link, useNavigate } from "react-router";
 import { Briefcase, UserCircle, ShieldCheck, Home, Menu, X, ChevronRight, Github, Twitter, Linkedin, LogOut, Settings, User as UserIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, getAvatarUrl } from "../context/AuthContext";
 
 export function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -104,7 +104,7 @@ export function Layout() {
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} 
                     className="flex items-center gap-2 focus:outline-none"
                   >
-                    <img src={user.avatar} alt="Profile" className="w-10 h-10 rounded-full border-2 border-indigo-100 object-cover shadow-sm" />
+                    <img src={getAvatarUrl(user)} alt="Profile" className="w-10 h-10 rounded-full border-2 border-indigo-100 object-cover shadow-sm" />
                   </button>
 
                   <AnimatePresence>
@@ -170,7 +170,7 @@ export function Layout() {
               <div className="px-4 pt-4 pb-6 space-y-1 shadow-inner">
                 {user && (
                   <div className="flex items-center gap-3 p-4 mb-2 bg-slate-50 rounded-xl">
-                    <img src={user.avatar} alt="Profile" className="w-10 h-10 rounded-full border border-slate-200 object-cover" />
+                    <img src={getAvatarUrl(user)} alt="Profile" className="w-10 h-10 rounded-full border border-slate-200 object-cover" />
                     <div>
                       <p className="font-bold text-slate-900">{user.name}</p>
                       <p className="text-xs text-slate-500 capitalize">{user.role}</p>

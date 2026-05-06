@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import api, { getToken, setToken, clearToken } from "../lib/api";
 
 type Role = "student" | "employer" | "admin";
 
@@ -7,12 +8,30 @@ export interface User {
   name: string;
   email: string;
   role: Role;
-  avatar: string;
+  avatar_url: string | null;
+  is_verified: boolean;
+}
+
+interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface SignupData {
+  name: string;
+  email: string;
+  password: string;
+  role: "student" | "employer";
+  company_name?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (role: Role) => void;
+  token: string | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (data: SignupData) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
 }
@@ -21,54 +40,63 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setTokenState] = useState<string | null>(getToken());
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (role: Role) => {
-    if (role === 'student') {
-      setUser({ 
-        id: '1', 
-        name: 'Usman Tariq', 
-        email: 'usman@example.com', 
-        role: 'student', 
-        avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' 
-      });
-    } else if (role === 'employer') {
-      setUser({ 
-        id: '2', 
-        name: 'Sarah Jenkins', 
-        email: 'sarah@nexus.tech', 
-        role: 'employer', 
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' 
-      });
-    } else if (role === 'admin') {
-      setUser({ 
-        id: '3', 
-        name: 'System Admin', 
-        email: 'admin@gradmatch.ai', 
-        role: 'admin', 
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' 
-      });
+  useEffect(() => {
+    const stored = getToken();
+    if (stored) {
+      api.get<User>("/api/v1/auth/me")
+        .then((u) => setUser(u))
+        .catch(() => {
+          clearToken();
+          setTokenState(null);
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const resp = await api.post<AuthResponse>("/api/v1/auth/login", { email, password }, false);
+    setToken(resp.access_token);
+    setTokenState(resp.access_token);
+    setUser(resp.user);
   };
 
-  const logout = () => setUser(null);
+  const signup = async (data: SignupData) => {
+    const resp = await api.post<AuthResponse>("/api/v1/auth/signup", data, false);
+    setToken(resp.access_token);
+    setTokenState(resp.access_token);
+    setUser(resp.user);
+  };
+
+  const logout = () => {
+    api.post("/api/v1/auth/logout", undefined, true).catch(() => {});
+    clearToken();
+    setTokenState(null);
+    setUser(null);
+  };
 
   const updateProfile = (data: Partial<User>) => {
-    if (user) {
-      setUser({ ...user, ...data });
-    }
+    if (user) setUser({ ...user, ...data });
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
+}
+
+export function getAvatarUrl(user: User): string {
+  if (user.avatar_url) return user.avatar_url;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=256`;
+}

@@ -3,13 +3,7 @@ import { motion } from "motion/react";
 import { useNavigate, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
-import { GraduationCap, ShieldCheck, Mail, Lock, User, Building, ArrowRight, AlertCircle } from "lucide-react";
-
-const DEMO: Record<string, { email: string; password: string }> = {
-  student: { email: "usman@example.com", password: "Demo1234!" },
-  employer: { email: "sarah@nexus.tech", password: "Demo1234!" },
-  admin: { email: "admin@gradmatch.ai", password: "Demo1234!" },
-};
+import { Mail, Lock, User, Building, GraduationCap, ArrowRight, AlertCircle } from "lucide-react";
 
 function hubPath(role: string) {
   if (role === "student") return "/student";
@@ -24,21 +18,6 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const handleDemoLogin = async (role: "student" | "employer" | "admin") => {
-    setLoading(true);
-    setError("");
-    try {
-      const u = await login(DEMO[role].email, DEMO[role].password);
-      navigate(hubPath(u.role));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,35 +52,6 @@ export function Login() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl shadow-slate-200/50"
         >
-          <div className="mb-8">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">Fast Demo Logins</p>
-            <div className="grid grid-cols-3 gap-3">
-              {(["student", "employer", "admin"] as const).map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleDemoLogin(role)}
-                  disabled={loading}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl transition-colors border disabled:opacity-50 ${
-                    role === "student" ? "bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100" :
-                    role === "employer" ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-100" :
-                    "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-100"
-                  }`}
-                >
-                  {role === "student" ? <GraduationCap size={24} className="mb-2" /> :
-                   role === "employer" ? <Building size={24} className="mb-2" /> :
-                   <ShieldCheck size={24} className="mb-2" />}
-                  <span className="text-xs font-bold capitalize">{role}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative flex items-center py-5">
-            <div className="flex-grow border-t border-slate-200" />
-            <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-medium">Or continue with email</span>
-            <div className="flex-grow border-t border-slate-200" />
-          </div>
-
           {error && (
             <div className="mb-4 flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm font-medium">
               <AlertCircle size={16} /> {error}
@@ -140,6 +90,11 @@ export function Login() {
             Don't have an account?{" "}
             <Link to="/signup" className="text-indigo-600 font-bold hover:text-indigo-700">Sign Up</Link>
           </p>
+          {import.meta.env.DEV && (
+            <p className="text-center mt-3 text-xs text-slate-400">
+              <Link to="/dev" className="hover:text-slate-600 font-medium underline">Dev quick-login →</Link>
+            </p>
+          )}
         </motion.div>
       </div>
     </div>

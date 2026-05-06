@@ -52,7 +52,7 @@ export function Profile() {
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
-  const [companySize, setCompanySize] = useState("51-200 employees");
+  const [companySize, setCompanySize] = useState("");
   const [companyWebsite, setCompanyWebsite] = useState("");
 
   useEffect(() => {
@@ -326,6 +326,7 @@ export function Profile() {
                           onChange={(e) => setCompanySize(e.target.value)}
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-700"
                         >
+                          <option value="">Select company size</option>
                           <option>1-50 employees</option>
                           <option>51-200 employees</option>
                           <option>201-1000 employees</option>

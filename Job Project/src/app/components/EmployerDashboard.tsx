@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   Building, Plus, TrendingUp, Briefcase, Bot, Filter,
-  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown, Lock
+  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown, Lock, Banknote
 } from "lucide-react";
 
 interface Job {
@@ -49,6 +49,7 @@ export function EmployerDashboard() {
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
   const [jobForm, setJobForm] = useState({
     title: "", location: "", job_type: "full_time",
+    salary_min: "", salary_max: "",
     required_skills: "", description: ""
   });
 
@@ -110,6 +111,8 @@ export function EmployerDashboard() {
         job_type: jobForm.job_type,
         description: jobForm.description,
         required_skills: skills,
+        salary_min: jobForm.salary_min ? parseInt(jobForm.salary_min) : null,
+        salary_max: jobForm.salary_max ? parseInt(jobForm.salary_max) : null,
       });
       setShowPostingSuccess(true);
       toast.success("Job submitted for review");
@@ -437,6 +440,33 @@ export function EmployerDashboard() {
                         onChange={(e) => setJobForm({ ...jobForm, required_skills: e.target.value })}
                         placeholder="Python, SQL, Machine Learning…"
                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Min Monthly Pay <span className="normal-case font-medium text-slate-400">(PKR, optional)</span>
+                      </label>
+                      <div className="relative">
+                        <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input type="number" min={0} value={jobForm.salary_min}
+                          onChange={(e) => setJobForm({ ...jobForm, salary_min: e.target.value })}
+                          placeholder="e.g. 50000"
+                          className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium" />
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Max Monthly Pay <span className="normal-case font-medium text-slate-400">(PKR, optional)</span>
+                      </label>
+                      <div className="relative">
+                        <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input type="number" min={0} value={jobForm.salary_max}
+                          onChange={(e) => setJobForm({ ...jobForm, salary_max: e.target.value })}
+                          placeholder="e.g. 80000"
+                          className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium" />
+                      </div>
                     </div>
                   </div>
 

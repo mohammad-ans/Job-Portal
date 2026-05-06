@@ -14,6 +14,7 @@ import { ContactAdmin } from "./components/ContactAdmin";
 import { Login, SignUp } from "./components/Auth";
 import { Profile } from "./components/Profile";
 import { MyApplications } from "./components/MyApplications";
+import { DevLogin } from "./components/DevLogin";
 import { useAuth } from "./context/AuthContext";
 
 function RequireAuth({ children, role }: { children: ReactNode; role?: string }) {
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
       { path: "contact-admin", Component: ContactAdmin },
       { path: "login", Component: Login },
       { path: "signup", Component: SignUp },
+      { path: "dev", Component: DevLogin },
     ],
   },
 ]);

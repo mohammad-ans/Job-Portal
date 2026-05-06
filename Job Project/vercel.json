@@ -1,8 +1,9 @@
 {
-    "rewrites":[
-        {
-            "source" : "/(.*)",
-            "destination" : "/"
-        }
-    ]
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }

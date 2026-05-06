@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   UploadCloud, FileText, CheckCircle, Bot, Search, Briefcase,
-  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award, ClipboardList
+  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award, ClipboardList, Clock
 } from "lucide-react";
 
 interface StudentProfile {
@@ -50,7 +50,7 @@ export function StudentDashboard() {
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobMatch[]>([]);
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [appliedStatuses, setAppliedStatuses] = useState<Map<string, string>>(new Map());
 
   const fetchProfile = useCallback(() => {
     api.get<StudentProfile>("/api/v1/users/me/profile")
@@ -70,8 +70,8 @@ export function StudentDashboard() {
   }, []);
 
   const fetchApplied = useCallback(() => {
-    api.get<{ items: { job_id: string }[] }>("/api/v1/applications/me")
-      .then((r) => setAppliedIds(new Set(r.items.map((a) => a.job_id))))
+    api.get<{ items: { job_id: string; status: string }[] }>("/api/v1/applications/me")
+      .then((r) => setAppliedStatuses(new Map(r.items.map((a) => [a.job_id, a.status]))))
       .catch(() => {});
   }, []);
 
@@ -124,9 +124,13 @@ export function StudentDashboard() {
 
   const handleApply = async (jobId: string) => {
     try {
-      await api.post("/api/v1/applications", { job_id: jobId });
-      setAppliedIds((prev) => new Set([...prev, jobId]));
-      toast.success("Applied successfully!");
+      const resp = await api.post<{ status: string }>("/api/v1/applications", { job_id: jobId });
+      setAppliedStatuses((prev) => new Map([...prev, [jobId, resp.status]]));
+      toast.success(
+        resp.status === "pending_verification"
+          ? "Application submitted — awaiting identity verification"
+          : "Applied successfully!"
+      );
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to apply");
     }
@@ -341,7 +345,8 @@ export function StudentDashboard() {
                 <AnimatePresence mode="popLayout">
                   {jobs.map((job, index) => {
                     const isExpanded = expandedJob === job.id;
-                    const alreadyApplied = appliedIds.has(job.id);
+                    const appStatus = appliedStatuses.get(job.id);
+                    const alreadyApplied = !!appStatus;
                     return (
                       <motion.div key={job.id} layout
                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -412,9 +417,15 @@ export function StudentDashboard() {
                                 </div>
                                 <div className="pt-2">
                                   {alreadyApplied ? (
-                                    <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">
-                                      <CheckCircle size={16} /> Applied
-                                    </div>
+                                    appStatus === "pending_verification" ? (
+                                      <div className="inline-flex items-center gap-2 px-6 py-3 bg-amber-50 text-amber-700 font-bold rounded-xl border border-amber-200">
+                                        <Clock size={16} /> Pending Verification
+                                      </div>
+                                    ) : (
+                                      <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">
+                                        <CheckCircle size={16} /> Applied
+                                      </div>
+                                    )
                                   ) : (
                                     <button onClick={() => handleApply(job.id)}
                                       className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md shadow-slate-900/20">

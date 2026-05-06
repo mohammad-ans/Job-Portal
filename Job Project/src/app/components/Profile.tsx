@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useAuth, getAvatarUrl } from "../context/AuthContext";
-import { Save, User, Building, MapPin, GraduationCap, Mail, Camera, CheckCircle } from "lucide-react";
+import { Save, User, Building, MapPin, GraduationCap, Mail, Camera, CheckCircle, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router";
 import { api } from "../lib/api";
 import { toast } from "sonner";
@@ -27,9 +27,18 @@ interface EmployerProfile {
 export function Profile() {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const [name, setName] = useState(user?.name ?? "");
 
@@ -71,6 +80,53 @@ export function Profile() {
 
   if (!user) return null;
 
+  const handleAvatarClick = () => avatarInputRef.current?.click();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAvatarUploading(true);
+    try {
+      const form = new FormData();
+      form.append("avatar", f);
+      const resp = await api.upload<{ avatar_url: string }>("/api/v1/users/me/avatar", form);
+      updateProfile({ avatar_url: resp.avatar_url });
+      toast.success("Profile picture updated");
+    } catch {
+      toast.error("Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await api.post("/api/v1/users/me/password", {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      toast.success("Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to change password");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -107,11 +163,16 @@ export function Profile() {
         {/* Left Column: Avatar & Quick Info */}
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-sm text-center">
-            <div className="relative w-32 h-32 mx-auto mb-4 group cursor-pointer">
-              <img src={getAvatarUrl(user)} alt="Profile" className="w-full h-full rounded-full object-cover border-4 border-white shadow-lg" />
+            <div className="relative w-32 h-32 mx-auto mb-4 group cursor-pointer" onClick={handleAvatarClick}>
+              <img src={getAvatarUrl(user)} alt="Profile" className={`w-full h-full rounded-full object-cover border-4 border-white shadow-lg transition-opacity ${avatarUploading ? "opacity-50" : ""}`} />
               <div className="absolute inset-0 bg-slate-900/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="text-white" size={32} />
+                {avatarUploading ? (
+                  <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="text-white" size={32} />
+                )}
               </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             </div>
             <h3 className="font-bold text-slate-900 text-lg">{user.name}</h3>
             <p className="text-sm text-slate-500 uppercase tracking-widest font-bold mt-1">{user.role}</p>
@@ -293,6 +354,79 @@ export function Profile() {
                 </div>
               </form>
             )}
+          </motion.div>
+
+          {/* Password Change Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm mt-6"
+          >
+            <h3 className="text-lg font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+              <Lock size={20} className="text-slate-500" /> Change Password
+            </h3>
+            <p className="text-sm text-slate-500 mb-6">Update your login password at any time.</p>
+            <form onSubmit={handlePasswordChange} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Current Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    required
+                    type={showPasswords ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full pl-11 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    placeholder="••••••••"
+                  />
+                  <button type="button" onClick={() => setShowPasswords(!showPasswords)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showPasswords ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      required
+                      type={showPasswords ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      minLength={8}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      placeholder="Min. 8 characters"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      required
+                      type={showPasswords ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      placeholder="Repeat new password"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Lock size={18} /> {savingPassword ? "Changing…" : "Change Password"}
+                </button>
+              </div>
+            </form>
           </motion.div>
         </div>
       </div>

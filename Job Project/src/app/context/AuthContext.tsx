@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import api, { getToken, setToken, clearToken } from "../lib/api";
+import api, { getToken, setToken, clearToken, API_BASE } from "../lib/api";
 
 type Role = "student" | "employer" | "admin";
 
@@ -99,6 +99,9 @@ export function useAuth() {
 }
 
 export function getAvatarUrl(user: User): string {
-  if (user.avatar_url) return user.avatar_url;
+  if (user.avatar_url) {
+    if (user.avatar_url.startsWith("/uploads/")) return `${API_BASE}${user.avatar_url}`;
+    return user.avatar_url;
+  }
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=256`;
 }

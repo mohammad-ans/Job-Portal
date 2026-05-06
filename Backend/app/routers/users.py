@@ -10,8 +10,10 @@ from app.models.user import User
 from app.models.student_profile import StudentProfile
 from app.models.employer_profile import EmployerProfile
 from app.schemas.user import (
-    StudentProfileOut, EmployerProfileOut, UserOut, ProfilePatch, ResumeUploadOut
+    StudentProfileOut, EmployerProfileOut, UserOut, ProfilePatch,
+    ResumeUploadOut, PasswordChangeRequest, AvatarUploadOut
 )
+from app.core.security import hash_password, verify_password
 from app.services import resume_parser, skills_vocab
 from app.routers.auth import _user_out
 
@@ -160,3 +162,43 @@ def upload_resume(
         resume_text=text,
         skills_extracted=extracted,
     )
+
+
+@router.post("/me/password", status_code=204)
+def change_password(
+    body: PasswordChangeRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return None
+
+
+@router.post("/me/avatar", response_model=AvatarUploadOut)
+def upload_avatar(
+    avatar: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    if avatar.content_type not in allowed:
+        raise HTTPException(400, "Avatar must be a JPEG, PNG, GIF, or WebP image")
+
+    file_bytes = avatar.file.read()
+    if len(file_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(413, "Avatar exceeds 5MB limit")
+
+    avatar_dir = Path(settings.RESUME_UPLOAD_DIR).parent / "avatars"
+    avatar_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(avatar.filename).suffix or ".jpg"
+    filename = f"{uuid.uuid4()}{ext}"
+    (avatar_dir / filename).write_bytes(file_bytes)
+
+    user.avatar_url = f"/uploads/avatars/{filename}"
+    db.commit()
+    return AvatarUploadOut(avatar_url=user.avatar_url)

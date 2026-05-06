@@ -10,6 +10,7 @@ from app.db.base import Base
 class ApplicationStatus(str, enum.Enum):
     matched = "matched"
     applied = "applied"
+    pending_verification = "pending_verification"
     shortlisted = "shortlisted"
     rejected = "rejected"
     hired = "hired"

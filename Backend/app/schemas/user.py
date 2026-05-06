@@ -72,3 +72,12 @@ class ResumeUploadOut(BaseModel):
     resume_url: str
     resume_text: str
     skills_extracted: List[str]
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class AvatarUploadOut(BaseModel):
+    avatar_url: str

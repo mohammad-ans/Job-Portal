@@ -12,11 +12,21 @@ from app.db.session import engine
 # Import all models so SQLAlchemy registers them with Base before create_all
 import app.models  # noqa: F401
 
-from app.routers import auth, users, jobs, matches, applications, admin, content
+from app.routers import auth, users, jobs, matches, applications, admin, content, faq, contact
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure the application_status enum has pending_verification (idempotent)
+    from sqlalchemy import text
+    try:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text(
+                "ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'pending_verification'"
+            ))
+    except Exception:
+        pass  # enum type may not exist yet (first run), create_all will create it correctly
+
     # Create all tables (idempotent — skips existing tables)
     Base.metadata.create_all(bind=engine)
     # Seed demo data if not already present
@@ -50,6 +60,8 @@ app.include_router(matches.router, prefix=PREFIX)
 app.include_router(applications.router, prefix=PREFIX)
 app.include_router(admin.router, prefix=PREFIX)
 app.include_router(content.router, prefix=PREFIX)
+app.include_router(faq.router, prefix=PREFIX)
+app.include_router(contact.router, prefix=PREFIX)
 
 upload_dir = Path(settings.RESUME_UPLOAD_DIR)
 upload_dir.mkdir(parents=True, exist_ok=True)

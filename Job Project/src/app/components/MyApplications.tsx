@@ -31,6 +31,12 @@ interface ApplicationItem {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
+  pending_verification: {
+    label: "Pending Verification",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    icon: <Clock size={13} />,
+  },
   applied: {
     label: "Applied",
     bg: "bg-blue-50",

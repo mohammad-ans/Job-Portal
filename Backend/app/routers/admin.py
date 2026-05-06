@@ -4,15 +4,16 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.deps import get_db, require_role
+from app.core.security import hash_password
 from app.models.approval import Approval, ApprovalType, ApprovalStatus
 from app.models.job import Job, JobStatus
 from app.models.student_profile import StudentProfile
 from app.models.employer_profile import EmployerProfile
-from app.models.user import User
-from app.models.application import Application
+from app.models.user import User, UserRole
+from app.models.application import Application, ApplicationStatus
 from app.models.system_log import SystemLog
 from app.schemas.approval import ApprovalOut, ApprovalRejectBody, ApprovalListOut
-from app.schemas.admin import AdminStatsOut, SystemLogOut, SystemLogListOut
+from app.schemas.admin import AdminStatsOut, SystemLogOut, SystemLogListOut, CreateAdminRequest
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_role("admin")
@@ -127,6 +128,11 @@ def approve(
         if profile:
             profile.is_approved = True
             profile.user.is_verified = True
+            # Promote any pending_verification applications to applied
+            db.query(Application).filter(
+                Application.student_id == profile.id,
+                Application.status == ApplicationStatus.pending_verification,
+            ).update({"status": ApplicationStatus.applied})
 
     _write_log(db, f"Approved {approval.target_type.value}: {approval.name}", user.id)
     db.commit()
@@ -177,3 +183,77 @@ def get_logs(
         .all()
     )
     return SystemLogListOut(items=[_log_out(l) for l in logs])
+
+
+@router.get("/employers")
+def list_employers(
+    db: Session = Depends(get_db),
+    user=Depends(admin_only),
+):
+    profiles = db.query(EmployerProfile).all()
+    items = []
+    for p in profiles:
+        job_ids = [j.id for j in p.jobs]
+        app_count = (
+            db.query(Application)
+            .filter(Application.job_id.in_(job_ids))
+            .count()
+        ) if job_ids else 0
+        items.append({
+            "id": str(p.id),
+            "company_name": p.company_name,
+            "industry": p.industry,
+            "is_approved": p.is_approved,
+            "job_count": len(job_ids),
+            "application_count": app_count,
+        })
+    return {"items": items}
+
+
+@router.get("/employers/{employer_id}/applications")
+def employer_applications(
+    employer_id: UUID,
+    db: Session = Depends(get_db),
+    user=Depends(admin_only),
+):
+    profile = db.query(EmployerProfile).filter(EmployerProfile.id == employer_id).first()
+    if not profile:
+        raise HTTPException(404, "Employer not found")
+
+    items = []
+    for job in profile.jobs:
+        for app in job.applications:
+            sp = app.student
+            items.append({
+                "application_id": str(app.id),
+                "job_title": job.title,
+                "student_name": sp.user.name,
+                "student_email": sp.user.email,
+                "university": sp.university,
+                "status": app.status.value,
+                "match_score": float(app.match_score),
+                "applied_at": app.created_at.isoformat(),
+            })
+    return {"company_name": profile.company_name, "items": items}
+
+
+@router.post("/users", status_code=201)
+def create_admin_user(
+    body: CreateAdminRequest,
+    db: Session = Depends(get_db),
+    user=Depends(admin_only),
+):
+    if db.query(User).filter(User.email == body.email).first():
+        raise HTTPException(409, "Email already registered")
+    new_user = User(
+        email=body.email,
+        password_hash=hash_password(body.password),
+        name=body.name,
+        role=UserRole.admin,
+        is_verified=True,
+    )
+    db.add(new_user)
+    _write_log(db, f"Admin user created: {body.email}", user.id)
+    db.commit()
+    db.refresh(new_user)
+    return {"id": str(new_user.id), "name": new_user.name, "email": new_user.email, "role": "admin"}

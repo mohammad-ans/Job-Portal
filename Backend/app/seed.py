@@ -8,6 +8,7 @@ from app.models.employer_profile import EmployerProfile
 from app.models.job import Job, JobType, JobStatus
 from app.models.approval import Approval, ApprovalType, ApprovalStatus
 from app.models.success_story import SuccessStory, StoryType
+from app.models.faq import FAQ
 
 DEMO_PASSWORD = hash_password("Demo1234!")
 
@@ -203,6 +204,48 @@ def seed():
         # --- Success stories ---
         for sdata in STORIES:
             db.add(SuccessStory(**sdata))
+
+        # --- FAQs ---
+        faqs = [
+            FAQ(question="How long does account verification take?",
+                answer="Admin team reviews new student and employer accounts within 24 hours. You will receive full platform access once verified. In the meantime you can complete your profile and upload your resume.",
+                category="Getting Started", order_index=0),
+            FAQ(question="How do I get my identity verified as a student?",
+                answer="After signing up, your account is automatically queued for admin review. To speed up verification, go to Account Settings and fill in your university, degree, and graduation year. Upload your resume — the more complete your profile, the faster the approval.",
+                category="Getting Started", order_index=1),
+            FAQ(question="Can I apply for jobs before my identity is verified?",
+                answer="Yes — you can apply, but the application will show a 'Pending Verification' status and will not be visible to employers until an admin verifies your identity. Once verified, all your pending applications automatically become active.",
+                category="Getting Started", order_index=2),
+            FAQ(question="How do I upload my resume and why is it important?",
+                answer="Go to your Student Hub and click the upload area, or drag and drop a PDF/DOCX file. The AI parser extracts your skills automatically and uses them to compute match scores. A complete resume with a clear skills section will dramatically improve your match quality.",
+                category="Resume & Profile", order_index=0),
+            FAQ(question="What resume format gives the best parsing results?",
+                answer="Use a single-column PDF or DOCX with clearly labelled sections: Skills, Education, and Projects. Avoid tables, multiple columns, and images — the parser reads plain text. List specific technologies (e.g. 'React', 'Python', 'SQL') rather than generic descriptions.",
+                category="Resume & Profile", order_index=1),
+            FAQ(question="How is the AI Match Score calculated?",
+                answer="The score is computed using Cosine Similarity between the vector of your extracted skills and the vector of the job's required skills and description keywords. A score above 70% means strong alignment. Skills that appear in both your profile and the job description are highlighted in green.",
+                category="AI Matching", order_index=0),
+            FAQ(question="Why do some jobs appear even if my score is lower?",
+                answer="The engine shows all jobs where any skill overlap exists, ranked from highest to lowest match. This gives you visibility into stretch opportunities. Applying with a lower score is still worthwhile — employers see your full profile.",
+                category="AI Matching", order_index=1),
+            FAQ(question="How do employers see my application?",
+                answer="Once verified, your application appears in the employer's candidate pipeline ranked by AI match score. They can view your skills, GPA, university, and a resume snippet. Shortlisted candidates are moved to a dedicated section; rejected ones are removed from their view.",
+                category="AI Matching", order_index=2),
+            FAQ(question="How does an employer post a job?",
+                answer="Employers must first be verified by an admin. Once verified, go to Employer Suite → Post New Role and fill in the job title, location, type, required skills, and description. The job goes to admin review; once approved it goes live and matching begins automatically.",
+                category="For Employers", order_index=0),
+            FAQ(question="How do I change my password?",
+                answer="Go to Account Settings (click your avatar in the top-right corner → Account Settings). Scroll down to the 'Change Password' section. Enter your current password, then your new password twice. Click 'Change Password' to save.",
+                category="Account", order_index=0),
+            FAQ(question="How do I update my profile picture?",
+                answer="On the Account Settings page, click your profile photo. A file picker will open — select a JPEG, PNG, or WebP image under 5 MB. The photo updates immediately across the header and all pages.",
+                category="Account", order_index=1),
+            FAQ(question="Can I track all my job applications?",
+                answer="Yes. From your Student Hub, click 'My Applications' in the header. You will see all applications with their current status: Pending Verification, Applied, Shortlisted, Not Selected, or Hired. Use the filter buttons to sort by status.",
+                category="Account", order_index=2),
+        ]
+        for faq in faqs:
+            db.add(faq)
 
         db.commit()
         print("Seed data inserted successfully.")

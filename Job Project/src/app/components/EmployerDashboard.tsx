@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   Building, Plus, TrendingUp, Briefcase, Bot, Filter,
-  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown
+  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown, Lock
 } from "lucide-react";
 
 interface Job {
@@ -385,7 +385,20 @@ export function EmployerDashboard() {
                 </div>
               </div>
 
-              {!showPostingSuccess ? (
+              {!profile?.is_approved ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-6">
+                    <Lock size={36} />
+                  </div>
+                  <h3 className="text-xl font-extrabold text-slate-900 mb-2">Company Verification Required</h3>
+                  <p className="text-slate-500 max-w-md font-medium">
+                    Your company is pending admin verification. Once approved, you'll be able to post job listings and start receiving AI-matched candidates.
+                  </p>
+                  <div className="mt-6 px-5 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 font-bold text-sm">
+                    Verification usually completes within 24 hours
+                  </div>
+                </div>
+              ) : !showPostingSuccess ? (
                 <form onSubmit={handlePostJob} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2.5">

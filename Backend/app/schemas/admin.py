@@ -23,3 +23,9 @@ class SystemLogOut(BaseModel):
 
 class SystemLogListOut(BaseModel):
     items: List[SystemLogOut]
+
+
+class CreateAdminRequest(BaseModel):
+    name: str
+    email: str
+    password: str

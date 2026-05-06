@@ -51,16 +51,23 @@ def apply_to_job(
     )
 
     if existing:
-        existing.status = ApplicationStatus.applied
+        existing.status = (
+            ApplicationStatus.applied if profile.is_approved
+            else ApplicationStatus.pending_verification
+        )
         db.commit()
         db.refresh(existing)
         return _app_out(existing)
 
+    initial_status = (
+        ApplicationStatus.applied if profile.is_approved
+        else ApplicationStatus.pending_verification
+    )
     app = Application(
         student_id=profile.id,
         job_id=body.job_id,
         match_score=Decimal("0"),
-        status=ApplicationStatus.applied,
+        status=initial_status,
     )
     db.add(app)
     db.commit()

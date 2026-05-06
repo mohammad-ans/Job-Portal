@@ -91,6 +91,8 @@ def create_job(
     profile = db.query(EmployerProfile).filter(EmployerProfile.user_id == user.id).first()
     if not profile:
         raise HTTPException(404, "Employer profile not found")
+    if not profile.is_approved:
+        raise HTTPException(403, "Your company must be verified by an admin before posting jobs")
 
     try:
         jtype = JobType(body.job_type)

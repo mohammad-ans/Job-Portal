@@ -127,9 +127,13 @@ def get_candidates(
     if not job:
         raise HTTPException(404, "Job not found or not owned by you")
 
+    from app.models.application import ApplicationStatus
     applications = (
         db.query(Application)
-        .filter(Application.job_id == job_id)
+        .filter(
+            Application.job_id == job_id,
+            Application.status != ApplicationStatus.pending_verification,
+        )
         .order_by(Application.match_score.desc())
         .limit(limit)
         .all()

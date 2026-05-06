@@ -25,7 +25,7 @@ interface EmployerProfile {
 }
 
 export function Profile() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,6 +85,7 @@ export function Profile() {
             }
           : { company_name: companyName, industry, location, company_size: companySize, company_website: companyWebsite };
       await api.patch("/api/v1/users/me/profile", patch);
+      updateProfile({ name });
       toast.success("Settings saved");
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);

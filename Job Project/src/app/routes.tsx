@@ -13,6 +13,7 @@ import { HelpCenter } from "./components/HelpCenter";
 import { ContactAdmin } from "./components/ContactAdmin";
 import { Login, SignUp } from "./components/Auth";
 import { Profile } from "./components/Profile";
+import { MyApplications } from "./components/MyApplications";
 import { useAuth } from "./context/AuthContext";
 
 function RequireAuth({ children, role }: { children: ReactNode; role?: string }) {
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
       {
         path: "profile",
         element: <RequireAuth><Profile /></RequireAuth>,
+      },
+      {
+        path: "applications",
+        element: <RequireAuth role="student"><MyApplications /></RequireAuth>,
       },
       { path: "pricing", Component: Pricing },
       { path: "success-stories", Component: SuccessStories },

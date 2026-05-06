@@ -40,6 +40,7 @@ interface EmployerProfile {
 export function EmployerDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"applicants" | "post">("applicants");
+  const [candidateTab, setCandidateTab] = useState<"pending" | "shortlisted">("pending");
   const [showPostingSuccess, setShowPostingSuccess] = useState(false);
   const [expandedApplicant, setExpandedApplicant] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -71,13 +72,29 @@ export function EmployerDashboard() {
       .catch(() => {});
   }, [selectedJobId]);
 
+  const pendingCandidates = candidates.filter(
+    (c) => c.status !== "shortlisted" && c.status !== "hired" && c.status !== "rejected"
+  );
+  const shortlistedCandidates = candidates.filter(
+    (c) => c.status === "shortlisted" || c.status === "hired"
+  );
+
   const handleStatusUpdate = async (applicationId: string, status: string) => {
     try {
       await api.patch(`/api/v1/applications/${applicationId}/status`, { status });
-      setCandidates((prev) =>
-        prev.map((c) => c.application_id === applicationId ? { ...c, status } : c)
-      );
-      toast.success(`Candidate ${status}`);
+      if (status === "rejected") {
+        setCandidates((prev) => prev.filter((c) => c.application_id !== applicationId));
+        setExpandedApplicant(null);
+        toast.success("Candidate rejected and removed");
+      } else {
+        setCandidates((prev) =>
+          prev.map((c) => c.application_id === applicationId ? { ...c, status } : c)
+        );
+        if (status === "shortlisted") {
+          setCandidateTab("shortlisted");
+          toast.success("Candidate shortlisted");
+        }
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to update status");
     }
@@ -159,8 +176,8 @@ export function EmployerDashboard() {
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Active Jobs</p>
               </div>
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                <p className="text-3xl font-black text-emerald-600 mb-1">{candidates.length}</p>
-                <p className="text-[10px] text-emerald-600/80 font-bold uppercase tracking-wider">Candidates</p>
+                <p className="text-3xl font-black text-emerald-600 mb-1">{shortlistedCandidates.length}</p>
+                <p className="text-[10px] text-emerald-600/80 font-bold uppercase tracking-wider">Shortlisted</p>
               </div>
             </div>
 
@@ -205,31 +222,55 @@ export function EmployerDashboard() {
           {activeTab === "applicants" && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
               className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden min-h-[600px] flex flex-col">
-              <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50">
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900">{selectedJob?.title ?? "Select a job"}</h2>
-                  <p className="text-sm text-slate-500 mt-1 font-medium">Viewing Top AI-Ranked Candidates</p>
-                </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="relative flex-grow sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" placeholder="Search skills..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" />
+              <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900">{selectedJob?.title ?? "Select a job"}</h2>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">AI-Ranked Candidate Pipeline</p>
                   </div>
-                  <button className="p-2.5 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 bg-white shadow-sm">
-                    <Filter size={20} />
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-grow sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input type="text" placeholder="Search skills..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" />
+                    </div>
+                    <button className="p-2.5 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 bg-white shadow-sm">
+                      <Filter size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+                  <button
+                    onClick={() => setCandidateTab("pending")}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${candidateTab === "pending" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    Pending Review
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-black ${candidateTab === "pending" ? "bg-indigo-100 text-indigo-700" : "bg-slate-200 text-slate-500"}`}>
+                      {pendingCandidates.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setCandidateTab("shortlisted")}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${candidateTab === "shortlisted" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    Shortlisted
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-black ${candidateTab === "shortlisted" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                      {shortlistedCandidates.length}
+                    </span>
                   </button>
                 </div>
               </div>
 
               <div className="divide-y divide-slate-100 flex-grow">
-                {candidates.length === 0 ? (
+                {(candidateTab === "pending" ? pendingCandidates : shortlistedCandidates).length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-16 text-slate-400">
                     <Bot size={48} className="mb-4 opacity-40" />
-                    <p className="font-semibold">No candidates yet for this job</p>
+                    <p className="font-semibold">
+                      {candidateTab === "pending" ? "No pending candidates for this job" : "No shortlisted candidates yet"}
+                    </p>
                   </div>
                 ) : (
-                  candidates.map((applicant, index) => {
+                  (candidateTab === "pending" ? pendingCandidates : shortlistedCandidates).map((applicant, index) => {
                     const isExpanded = expandedApplicant === applicant.application_id;
                     const avatar = applicant.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(applicant.name)}&background=6366f1&color=fff&size=256`;
                     return (
@@ -296,15 +337,30 @@ export function EmployerDashboard() {
                                     <p className="text-sm text-slate-600 leading-relaxed p-4 bg-slate-50 border border-slate-100 rounded-xl italic">"{applicant.resume_preview}"</p>
                                   </div>
                                 )}
-                                <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                                  <button onClick={() => handleStatusUpdate(applicant.application_id, "rejected")}
-                                    className="px-5 py-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 font-bold text-sm rounded-xl transition-colors flex items-center gap-1">
-                                    <XCircle size={16} /> Reject
-                                  </button>
-                                  <button onClick={() => handleStatusUpdate(applicant.application_id, "shortlisted")}
-                                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
-                                    <CheckCircle size={16} /> Shortlist
-                                  </button>
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                                  {candidateTab === "shortlisted" && (
+                                    <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 border border-emerald-100 text-xs font-bold px-3 py-1.5 rounded-lg">
+                                      <CheckCircle size={14} /> Shortlisted
+                                    </span>
+                                  )}
+                                  <div className="flex items-center gap-3 ml-auto">
+                                    <button onClick={() => handleStatusUpdate(applicant.application_id, "rejected")}
+                                      className="px-5 py-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 font-bold text-sm rounded-xl transition-colors flex items-center gap-1">
+                                      <XCircle size={16} /> Reject
+                                    </button>
+                                    {candidateTab === "pending" && (
+                                      <button onClick={() => handleStatusUpdate(applicant.application_id, "shortlisted")}
+                                        className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
+                                        <CheckCircle size={16} /> Shortlist
+                                      </button>
+                                    )}
+                                    {candidateTab === "shortlisted" && (
+                                      <button onClick={() => handleStatusUpdate(applicant.application_id, "hired")}
+                                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
+                                        <CheckCircle size={16} /> Mark as Hired
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </motion.div>

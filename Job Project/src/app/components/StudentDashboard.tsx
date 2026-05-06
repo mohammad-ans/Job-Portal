@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth, getAvatarUrl } from "../context/AuthContext";
 import { Link } from "react-router";
@@ -6,8 +6,17 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   UploadCloud, FileText, CheckCircle, Bot, Search, Briefcase,
-  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award
+  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award, ClipboardList
 } from "lucide-react";
+
+interface StudentProfile {
+  university: string | null;
+  degree: string | null;
+  gpa: number | null;
+  graduation_year: number | null;
+  skills: string[];
+  resume_url: string | null;
+}
 
 interface JobMatch {
   id: string;
@@ -34,15 +43,22 @@ const JOB_TYPE_LABELS: Record<string, string> = {
 
 export function StudentDashboard() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobMatch[]>([]);
-  const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const fetchProfile = useCallback(() => {
+    api.get<StudentProfile>("/api/v1/users/me/profile")
+      .then(setProfile)
+      .catch(() => {});
+  }, []);
+
+  const fetchMatches = useCallback(() => {
     api.get<{ items: JobMatch[] }>("/api/v1/matches/jobs")
       .then((r) => {
         if (r.items.length > 0) {
@@ -51,6 +67,18 @@ export function StudentDashboard() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  const fetchApplied = useCallback(() => {
+    api.get<{ items: { job_id: string }[] }>("/api/v1/applications/me")
+      .then((r) => setAppliedIds(new Set(r.items.map((a) => a.job_id))))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+    fetchMatches();
+    fetchApplied();
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,12 +99,14 @@ export function StudentDashboard() {
     try {
       const form = new FormData();
       form.append("resume", f);
-      const result = await api.upload<{ resume_url: string; skills_extracted: string[] }>(
+      await api.upload<{ resume_url: string; skills_extracted: string[] }>(
         "/api/v1/users/me/resume", form
       );
       clearInterval(interval);
       setProgress(100);
-      setExtractedSkills(result.skills_extracted);
+
+      // Refresh profile to get updated skills
+      fetchProfile();
 
       const matches = await api.post<{ items: JobMatch[] }>("/api/v1/matches/recompute");
       setJobs(matches.items);
@@ -95,6 +125,7 @@ export function StudentDashboard() {
   const handleApply = async (jobId: string) => {
     try {
       await api.post("/api/v1/applications", { job_id: jobId });
+      setAppliedIds((prev) => new Set([...prev, jobId]));
       toast.success("Applied successfully!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to apply");
@@ -114,24 +145,35 @@ export function StudentDashboard() {
 
   const salaryLabel = (job: JobMatch) => {
     if (job.salary_min && job.salary_max)
-      return `$${(job.salary_min / 1000).toFixed(0)}k – $${(job.salary_max / 1000).toFixed(0)}k`;
-    if (job.salary_min) return `From $${(job.salary_min / 1000).toFixed(0)}k`;
+      return `PKR ${(job.salary_min / 1000).toFixed(0)}k – ${(job.salary_max / 1000).toFixed(0)}k`;
+    if (job.salary_min) return `From PKR ${(job.salary_min / 1000).toFixed(0)}k`;
     return "Competitive";
   };
 
+  const displayedSkills = profile?.skills?.length
+    ? profile.skills
+    : [];
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-slate-900">Student Hub</h1>
-        <p className="text-slate-500 mt-2 text-lg">Your intelligent career launchpad. Upload, analyze, and match.</p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900">Student Hub</h1>
+          <p className="text-slate-500 mt-2 text-lg">Your intelligent career launchpad. Upload, analyze, and match.</p>
+        </div>
+        <Link to="/applications"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors">
+          <ClipboardList size={18} className="text-indigo-500" /> My Applications
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column */}
         <div className="lg:col-span-4 space-y-6">
+          {/* Profile Card */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div className="w-16 h-16 bg-slate-100 rounded-full overflow-hidden border border-slate-200 flex-shrink-0">
                 <img src={getAvatarUrl(user)} alt={user.name} className="w-full h-full object-cover" />
               </div>
               <div>
@@ -142,20 +184,43 @@ export function StudentDashboard() {
               </div>
             </div>
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <GraduationCap className="text-slate-400 mt-0.5" size={18} />
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">BS Computer Science</p>
-                  <p className="text-xs text-slate-500">FAST-NU</p>
+              {(profile?.degree || profile?.university) && (
+                <div className="flex items-start gap-3">
+                  <GraduationCap className="text-slate-400 mt-0.5 flex-shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{profile.degree ?? "—"}</p>
+                    <p className="text-xs text-slate-500">{profile.university ?? ""}</p>
+                  </div>
+                </div>
+              )}
+              {profile?.gpa != null && (
+                <div className="flex items-start gap-3">
+                  <Award className="text-slate-400 mt-0.5 flex-shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">CGPA: {profile.gpa.toFixed(2)} / 4.0</p>
+                    {profile.graduation_year && (
+                      <p className="text-xs text-slate-500">Graduating {profile.graduation_year}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {displayedSkills.length > 0 && (
+              <div className="mt-5 pt-5 border-t border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Your Skills</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {displayedSkills.map((s) => (
+                    <span key={s} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded border border-indigo-100">{s}</span>
+                  ))}
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Award className="text-slate-400 mt-0.5" size={18} />
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">CGPA: 3.52 / 4.0</p>
-                  <p className="text-xs text-slate-500">Dean's List 2023</p>
-                </div>
-              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <Link to="/profile" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
+                Edit Profile →
+              </Link>
             </div>
           </div>
 
@@ -212,17 +277,19 @@ export function StudentDashboard() {
                     <CheckCircle className="text-emerald-500 bg-white rounded-full" size={20} />
                   </div>
                   <div className="space-y-4 pt-2">
-                    <div>
-                      <h4 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-2 flex items-center gap-1">
-                        <Sparkles size={12} /> Extracted Skills
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(extractedSkills.length ? extractedSkills : jobs[0]?.required_skills ?? []).slice(0, 8).map((s) => (
-                          <span key={s} className="px-2 py-1 bg-white text-emerald-700 text-xs font-bold rounded shadow-sm border border-emerald-100">{s}</span>
-                        ))}
+                    {displayedSkills.length > 0 && (
+                      <div>
+                        <h4 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-2 flex items-center gap-1">
+                          <Sparkles size={12} /> Skills on Profile
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {displayedSkills.slice(0, 8).map((s) => (
+                            <span key={s} className="px-2 py-1 bg-white text-emerald-700 text-xs font-bold rounded shadow-sm border border-emerald-100">{s}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <button onClick={() => { setFile(null); setAnalysisComplete(false); setExtractedSkills([]); }}
+                    )}
+                    <button onClick={() => { setFile(null); setAnalysisComplete(false); }}
                       className="w-full px-4 py-2.5 bg-white border border-emerald-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 text-emerald-700 rounded-xl text-sm font-bold transition-all shadow-sm">
                       Update Resume
                     </button>
@@ -274,6 +341,7 @@ export function StudentDashboard() {
                 <AnimatePresence mode="popLayout">
                   {jobs.map((job, index) => {
                     const isExpanded = expandedJob === job.id;
+                    const alreadyApplied = appliedIds.has(job.id);
                     return (
                       <motion.div key={job.id} layout
                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -327,21 +395,32 @@ export function StudentDashboard() {
                                 </div>
                                 <div className="space-y-3">
                                   <h4 className="font-bold text-slate-800 text-sm flex justify-between items-center">
-                                    Required Skills <span className="text-xs font-normal text-slate-500">Green = matched</span>
+                                    Required Skills <span className="text-xs font-normal text-slate-500">Green = you have it</span>
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
-                                    {job.required_skills.map((skill, i) => (
-                                      <span key={skill} className={`px-3 py-1.5 text-xs font-bold rounded-lg border ${i < 3 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-600"}`}>
-                                        {skill} {i < 3 && <CheckCircle size={10} className="inline ml-1 mb-0.5" />}
-                                      </span>
-                                    ))}
+                                    {job.required_skills.map((skill) => {
+                                      const matched = displayedSkills.some(
+                                        (s) => s.toLowerCase() === skill.toLowerCase()
+                                      );
+                                      return (
+                                        <span key={skill} className={`px-3 py-1.5 text-xs font-bold rounded-lg border ${matched ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-600"}`}>
+                                          {skill} {matched && <CheckCircle size={10} className="inline ml-1 mb-0.5" />}
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                                 <div className="pt-2">
-                                  <button onClick={() => handleApply(job.id)}
-                                    className="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md shadow-slate-900/20">
-                                    Apply with 1-Click
-                                  </button>
+                                  {alreadyApplied ? (
+                                    <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">
+                                      <CheckCircle size={16} /> Applied
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => handleApply(job.id)}
+                                      className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md shadow-slate-900/20">
+                                      Apply with 1-Click
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </motion.div>

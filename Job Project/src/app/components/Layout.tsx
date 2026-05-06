@@ -7,6 +7,7 @@ import { useAuth, getAvatarUrl } from "../context/AuthContext";
 export function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [roleSwitchTarget, setRoleSwitchTarget] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -39,8 +40,62 @@ export function Layout() {
     navigate('/');
   };
 
+  const roleForPath: Record<string, string> = { "/student": "student", "/employer": "employer" };
+
+  const handleFooterRoleLink = (e: React.MouseEvent, path: string) => {
+    const targetRole = roleForPath[path];
+    if (user && targetRole && user.role !== targetRole) {
+      e.preventDefault();
+      setRoleSwitchTarget(path);
+    }
+  };
+
+  const confirmRoleSwitch = () => {
+    logout();
+    setRoleSwitchTarget(null);
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+      <AnimatePresence>
+        {roleSwitchTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center px-4"
+            onClick={() => setRoleSwitchTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-slate-100"
+            >
+              <h3 className="text-xl font-extrabold text-slate-900 mb-2">Switch Role?</h3>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                You're currently signed in as <strong className="text-slate-700 capitalize">{user?.role}</strong>. To access this section you'll need to log out and sign in with a different account.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRoleSwitchTarget(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRoleSwitch}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <LogOut size={16} /> Log Out
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200/80 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -260,8 +315,16 @@ export function Layout() {
             <div>
               <h3 className="text-white font-semibold mb-4">Platform</h3>
               <ul className="space-y-3 text-sm">
-                <li><NavLink to="/student" className="hover:text-indigo-400 transition-colors">For Students</NavLink></li>
-                <li><NavLink to="/employer" className="hover:text-indigo-400 transition-colors">For Employers</NavLink></li>
+                <li>
+                  <NavLink to="/student" onClick={(e) => handleFooterRoleLink(e, "/student")} className="hover:text-indigo-400 transition-colors">
+                    For Students
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/employer" onClick={(e) => handleFooterRoleLink(e, "/employer")} className="hover:text-indigo-400 transition-colors">
+                    For Employers
+                  </NavLink>
+                </li>
                 <li><NavLink to="/pricing" className="hover:text-indigo-400 transition-colors">Pricing</NavLink></li>
                 <li><NavLink to="/success-stories" className="hover:text-indigo-400 transition-colors">Success Stories</NavLink></li>
               </ul>

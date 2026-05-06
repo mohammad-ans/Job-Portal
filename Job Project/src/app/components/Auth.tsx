@@ -11,33 +11,33 @@ const DEMO: Record<string, { email: string; password: string }> = {
   admin: { email: "admin@gradmatch.ai", password: "Demo1234!" },
 };
 
+function hubPath(role: string) {
+  if (role === "student") return "/student";
+  if (role === "employer") return "/employer";
+  return "/admin";
+}
+
 export function Login() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const doLogin = async (e: string, p: string) => {
+  const handleDemoLogin = async (role: "student" | "employer" | "admin") => {
     setLoading(true);
     setError("");
     try {
-      await login(e, p);
+      const u = await login(DEMO[role].email, DEMO[role].password);
+      navigate(hubPath(u.role));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
-      toast.error(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
       setLoading(false);
-      return;
     }
-    setLoading(false);
-  };
-
-  const handleDemoLogin = async (role: "student" | "employer" | "admin") => {
-    await doLogin(DEMO[role].email, DEMO[role].password);
-    if (role === "student") navigate("/student");
-    else if (role === "employer") navigate("/employer");
-    else navigate("/admin");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,9 +45,9 @@ export function Login() {
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
+      const u = await login(email, password);
       toast.success("Logged in successfully");
-      navigate("/");
+      navigate(hubPath(u.role));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       setError(msg);
@@ -162,9 +162,9 @@ export function SignUp() {
     setLoading(true);
     setError("");
     try {
-      await signup({ name, email, password, role, ...(role === "employer" ? { company_name: company } : {}) });
+      const u = await signup({ name, email, password, role, ...(role === "employer" ? { company_name: company } : {}) });
       toast.success("Account created! Awaiting admin verification.");
-      navigate(role === "student" ? "/student" : "/employer");
+      navigate(hubPath(u.role));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Signup failed";
       setError(msg);

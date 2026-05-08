@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS is_closed BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE employer_profiles ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS ai_summary TEXT",
         # password_reset_tokens is created by create_all above; this is a no-op safety net
         """CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

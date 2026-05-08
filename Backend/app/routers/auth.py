@@ -9,6 +9,7 @@ from app.models.employer_profile import EmployerProfile
 from app.models.approval import Approval, ApprovalType, ApprovalStatus
 from app.schemas.auth import SignupRequest, LoginRequest, AuthResponse
 from app.schemas.user import UserOut
+from app.services import ai_moderator
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,11 +54,18 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
         profile = StudentProfile(user_id=user.id, skills=[])
         db.add(profile)
         db.flush()
+        confidence = ai_moderator.score_student_profile(
+            name=user.name,
+            university=None,
+            degree=None,
+            gpa=None,
+            skills=[],
+        )
         approval = Approval(
             target_type=ApprovalType.student_verification,
             target_id=profile.id,
             name=user.name,
-            ai_confidence=80,
+            ai_confidence=confidence,
             flags=0,
             status=ApprovalStatus.pending,
         )
@@ -68,11 +76,17 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
         )
         db.add(profile)
         db.flush()
+        confidence = ai_moderator.score_company_profile(
+            company_name=body.company_name,
+            industry=None,
+            website=None,
+            description=None,
+        )
         approval = Approval(
             target_type=ApprovalType.company,
             target_id=profile.id,
             name=body.company_name,
-            ai_confidence=90,
+            ai_confidence=confidence,
             flags=0,
             status=ApprovalStatus.pending,
         )

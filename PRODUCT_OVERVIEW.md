@@ -84,9 +84,19 @@ The platform serves three distinct groups, each with a tailored experience.
 
 ---
 
-## AI Matching — How It Works
+## AI Features — How They Work
 
-When an employer posts a job, the platform's **Bidirectional Matching Engine** compares the job's required skills and description against every verified student's profile and résumé text. Using a technique called **Cosine Similarity**, it produces a percentage score representing how well each student matches the role. Employers always see the most relevant candidates first, and students only see jobs they are genuinely suited for — reducing noise for both sides.
+### Semantic Job Matching
+When a student uploads their résumé or visits their dashboard, the platform's **Bidirectional Matching Engine** runs. It uses **sentence-transformers** (a BERT-based neural network, `all-MiniLM-L6-v2`) to generate dense vector embeddings of both the student's profile and every active job posting. **Cosine similarity** between these vectors produces a percentage match score that captures semantic meaning — not just keyword overlap. A student who lists "ML engineering" will match a job requiring "machine learning" even without an exact word match. Employers always see the most relevant candidates first; students only see jobs they are genuinely suited for.
+
+### AI Match Explanations
+For each of the top-matched jobs, an LLM (served via **OpenRouter**) generates a one-sentence natural-language explanation of *why* the student is a good fit — e.g. *"Strong alignment on Python and data pipelines makes this a solid fit for the ML engineer role."* These explanations are shown on the student's job cards to help them understand the match.
+
+### AI Candidate Summaries
+When an employer views their candidate pipeline, each applicant card shows an AI-generated two-sentence executive summary of the candidate — written from the employer's perspective. The LLM synthesises the student's degree, skills, GPA, and résumé into a concise professional profile, saving employers the time of reading raw résumés before deciding whom to shortlist.
+
+### AI Moderation Confidence Score
+Every item entering the admin moderation queue — student identity verifications, company registrations, and job postings — receives an **AI confidence score (0–100)** computed by an LLM. The model evaluates completeness, internal consistency, and plausibility of the submission (e.g. whether a claimed university name is realistic, whether job skills match the description). Admins see this score alongside each queue item to prioritise and speed up their review decisions.
 
 ---
 
@@ -112,6 +122,14 @@ When an employer posts a job, the platform's **Bidirectional Matching Engine** c
 | **Authentication** | JWT (JSON Web Tokens) + bcrypt password hashing |
 | **Document Parsing** | pdfminer (PDF résumé text extraction) |
 | **Data Validation** | Pydantic |
+
+### AI & Machine Learning
+| | |
+|---|---|
+| **Semantic Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`) — BERT-based neural network for dense vector representations |
+| **Similarity Scoring** | Cosine similarity between student and job embedding vectors |
+| **Text Generation** | OpenRouter API (LLM gateway) — match explanations, candidate summaries, moderation scores |
+| **LLM Model** | Configurable; defaults to `mistralai/mistral-7b-instruct` |
 
 ---
 

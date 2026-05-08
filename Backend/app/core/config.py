@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str
     RESEND_FROM: str
     FRONTEND_URL: str
+    OPENROUTER_API_KEY: str
+    OPENROUTER_MODEL: str = "mistralai/mistral-7b-instruct:free"
 
     @property
     def cors_origins_list(self) -> List[str]:

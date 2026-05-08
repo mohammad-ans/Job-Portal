@@ -35,6 +35,7 @@ class Application(Base):
     )
     match_score = Column(Numeric(5, 2), nullable=False)
     ai_reason = Column(Text, nullable=True)
+    ai_summary = Column(Text, nullable=True)
     status = Column(
         Enum(ApplicationStatus, name="application_status"),
         nullable=False,

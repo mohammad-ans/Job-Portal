@@ -10,6 +10,7 @@ from app.models.user import User
 from app.models.student_profile import StudentProfile
 from app.models.employer_profile import EmployerProfile
 from app.models.approval import Approval, ApprovalType, ApprovalStatus
+from app.services import ai_moderator
 from app.schemas.user import (
     StudentProfileOut, EmployerProfileOut, UserOut, ProfilePatch,
     ResumeUploadOut, PasswordChangeRequest, AvatarUploadOut
@@ -237,11 +238,18 @@ def request_re_verification(
         Approval.status == ApprovalStatus.pending,
     ).first()
     if not existing:
+        confidence = ai_moderator.score_student_profile(
+            name=user.name,
+            university=profile.university,
+            degree=profile.degree,
+            gpa=float(profile.gpa) if profile.gpa is not None else None,
+            skills=list(profile.skills or []),
+        )
         db.add(Approval(
             target_type=ApprovalType.student_verification,
             target_id=profile.id,
             name=user.name,
-            ai_confidence=80,
+            ai_confidence=confidence,
             flags=0,
             status=ApprovalStatus.pending,
         ))

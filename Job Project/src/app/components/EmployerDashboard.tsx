@@ -57,6 +57,7 @@ export function EmployerDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
   const [postingJob, setPostingJob] = useState(false);
+  const [employerStats, setEmployerStats] = useState<{ total_candidates: number; total_hired: number } | null>(null);
   const [jobForm, setJobForm] = useState({
     title: "", location: "", job_type: "full_time",
     salary_min: "", salary_max: "",
@@ -77,6 +78,9 @@ export function EmployerDashboard() {
       .then(setProfile)
       .catch(() => {});
     fetchJobs();
+    api.get<{ total_candidates: number; total_hired: number }>("/api/v1/matches/employer-stats")
+      .then(setEmployerStats)
+      .catch(() => {});
 
     const onFocus = () => { fetchJobs(); };
     document.addEventListener("visibilitychange", onFocus);
@@ -240,17 +244,20 @@ export function EmployerDashboard() {
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-6">
                 <TrendingUp size={24} className="text-indigo-200" />
-                <h3 className="font-bold text-lg">Hiring Insights</h3>
+                <h3 className="font-bold text-lg">Pipeline Overview</h3>
               </div>
               <p className="text-sm text-indigo-100/90 leading-relaxed mb-6">
-                Our NLP matching engine has successfully reduced your average screening time by 11.3 hours per open role this month.
+                AI-ranked candidates across all your active roles, ready to review instantly.
               </p>
-              <div className="bg-black/10 rounded-2xl p-5 border border-white/10 backdrop-blur-md">
-                <div className="flex items-end gap-2">
-                  <p className="text-4xl font-black text-emerald-400">57%</p>
-                  <p className="text-emerald-400 mb-1">↓</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-black/10 rounded-2xl p-4 border border-white/10 backdrop-blur-md">
+                  <p className="text-3xl font-black text-white">{employerStats?.total_candidates ?? "—"}</p>
+                  <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mt-1">Total Applicants</p>
                 </div>
-                <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mt-2">Reduction in Time-to-Hire</p>
+                <div className="bg-black/10 rounded-2xl p-4 border border-white/10 backdrop-blur-md">
+                  <p className="text-3xl font-black text-emerald-400">{employerStats?.total_hired ?? "—"}</p>
+                  <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mt-1">Hired</p>
+                </div>
               </div>
             </div>
           </div>

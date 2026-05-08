@@ -1,8 +1,29 @@
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, Bot, CheckCircle2, Building, GraduationCap, Briefcase, Sparkles, BarChart3, Zap, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
+import api from "../lib/api";
+
+interface PublicStats {
+  verified_students: number;
+  verified_employers: number;
+  active_jobs: number;
+  total_hires: number;
+}
+
+function formatStat(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k+`;
+  if (n === 0) return "—";
+  return `${n}+`;
+}
 
 export function Home() {
+  const [stats, setStats] = useState<PublicStats | null>(null);
+
+  useEffect(() => {
+    api.get<PublicStats>("/api/v1/content/stats").then(setStats).catch(() => {});
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -38,7 +59,7 @@ export function Home() {
           >
             <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/80 border border-slate-700/50 text-indigo-300 text-sm font-semibold backdrop-blur-md shadow-lg shadow-indigo-900/20">
               <Sparkles size={16} className="text-amber-400" />
-              <span>Version 2.0 • Advanced NLP Engine</span>
+              <span>Semantic AI Matching • Verified Profiles</span>
             </motion.div>
             
             <motion.h1 variants={itemVariants} className="text-5xl lg:text-7xl font-black tracking-tight leading-[1.1]">
@@ -49,7 +70,7 @@ export function Home() {
             </motion.h1>
             
             <motion.p variants={itemVariants} className="text-lg lg:text-xl text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed font-light">
-              The AI-powered portal exclusively for fresh graduates. We extract 50+ data points from your resume and bi-directionally match you with employers searching for your exact skills.
+              The AI-powered portal exclusively for fresh graduates. We parse your resume, build a semantic profile, and bidirectionally match you with employers searching for your exact skills.
             </motion.p>
             
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center lg:justify-start pt-4">
@@ -70,7 +91,7 @@ export function Home() {
                 <ShieldCheck size={18} className="text-emerald-500" /> Admin Verified Profiles
               </div>
               <div className="flex items-center gap-2">
-                <Bot size={18} className="text-indigo-500" /> 98% Match Accuracy
+                <Bot size={18} className="text-indigo-500" /> Semantic AI Matching
               </div>
             </motion.div>
           </motion.div>
@@ -151,10 +172,10 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-slate-100 text-center">
             {[
-              { label: "Active Students", value: "12,500+" },
-              { label: "Verified Employers", value: "850+" },
-              { label: "Successful Hires", value: "4,200+" },
-              { label: "Avg. Match Accuracy", value: "96%" }
+              { label: "Verified Students", value: stats ? formatStat(stats.verified_students) : "—" },
+              { label: "Verified Employers", value: stats ? formatStat(stats.verified_employers) : "—" },
+              { label: "Active Jobs", value: stats ? formatStat(stats.active_jobs) : "—" },
+              { label: "Successful Hires", value: stats ? formatStat(stats.total_hires) : "—" }
             ].map((stat, i) => (
               <div key={i} className="px-4">
                 <p className="text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
@@ -172,7 +193,7 @@ export function Home() {
           <div className="max-w-3xl mx-auto text-center space-y-4 mb-20">
             <h2 className="text-indigo-600 font-bold tracking-wide uppercase text-sm">Bidirectional Engine</h2>
             <h3 className="text-4xl md:text-5xl font-extrabold text-slate-900">How GradMatch AI Works</h3>
-            <p className="text-lg text-slate-600">Our proprietary NLP algorithm reads resumes like a human recruiter, extracting nuanced skills and automatically ranking candidates against specific job requirements.</p>
+            <p className="text-lg text-slate-600">Our AI engine parses resumes, builds semantic embeddings from your skills and experience, and automatically ranks candidates against job requirements using cosine similarity.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -187,8 +208,8 @@ export function Home() {
               },
               {
                 icon: <Zap size={36} />,
-                title: "2. NLP Keyword Matching",
-                description: "We use Cosine Similarity vectors to compare candidate profiles against job descriptions, going beyond simple keyword counting.",
+                title: "2. Semantic Vector Matching",
+                description: "We use sentence-transformer embeddings and cosine similarity to compare candidate profiles against job descriptions, capturing meaning beyond keyword overlap.",
                 color: "text-indigo-600",
                 bg: "bg-indigo-100",
                 border: "border-indigo-200"
@@ -278,8 +299,8 @@ export function Home() {
                   >
                     <Bot className="text-indigo-400" size={24} />
                     <div>
-                      <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">NLP Engine</p>
-                      <p className="font-bold text-sm">Secure Matching</p>
+                      <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">AI Engine</p>
+                      <p className="font-bold text-sm">Semantic Matching</p>
                     </div>
                   </motion.div>
                 </div>

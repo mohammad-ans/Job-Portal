@@ -17,3 +17,10 @@ class SuccessStoryOut(BaseModel):
 
 class SuccessStoryListOut(BaseModel):
     items: List[SuccessStoryOut]
+
+
+class PublicStatsOut(BaseModel):
+    verified_students: int
+    verified_employers: int
+    active_jobs: int
+    total_hires: int

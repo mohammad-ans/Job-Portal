@@ -322,9 +322,9 @@ export function StudentDashboard() {
                     <Bot className="absolute inset-0 m-auto text-indigo-600" size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-indigo-900 text-sm">NLP Extraction Active</h3>
+                    <h3 className="font-bold text-indigo-900 text-sm">Analysing Resume</h3>
                     <p className="text-indigo-600/70 text-xs mt-1">
-                      {progress < 30 ? "Reading document structure…" : progress < 70 ? "Identifying technical keywords…" : "Vectorizing skillset for matching…"}
+                      {progress < 30 ? "Reading document content…" : progress < 70 ? "Extracting skills and experience…" : "Preparing your matches…"}
                     </p>
                   </div>
                   <div className="w-full bg-indigo-200/50 rounded-full h-2 mt-4 overflow-hidden">

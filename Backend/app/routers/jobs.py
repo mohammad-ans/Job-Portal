@@ -6,6 +6,7 @@ from app.models.job import Job, JobType, JobStatus
 from app.models.employer_profile import EmployerProfile
 from app.models.approval import Approval, ApprovalType, ApprovalStatus
 from app.schemas.job import JobCreate, JobPatch, JobOut, JobListOut
+from app.services import ai_moderator
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -114,11 +115,19 @@ def create_job(
     db.add(job)
     db.flush()
 
+    confidence = ai_moderator.score_job_posting(
+        title=body.title,
+        company=profile.company_name,
+        location=body.location,
+        job_type=body.job_type,
+        required_skills=body.required_skills,
+        description=body.description,
+    )
     approval = Approval(
         target_type=ApprovalType.job,
         target_id=job.id,
         name=f"{body.title} @ {profile.company_name}",
-        ai_confidence=95,
+        ai_confidence=confidence,
         flags=0,
         status=ApprovalStatus.pending,
     )
@@ -162,11 +171,19 @@ def update_job(
 
     job.status = JobStatus.pending
 
+    confidence = ai_moderator.score_job_posting(
+        title=job.title,
+        company=job.employer.company_name,
+        location=job.location,
+        job_type=job.job_type.value,
+        required_skills=list(job.required_skills or []),
+        description=job.description,
+    )
     approval = Approval(
         target_type=ApprovalType.job,
         target_id=job.id,
         name=f"{job.title} @ {job.employer.company_name}",
-        ai_confidence=95,
+        ai_confidence=confidence,
         flags=0,
         status=ApprovalStatus.pending,
     )

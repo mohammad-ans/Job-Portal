@@ -8,3 +8,4 @@ from .success_story import SuccessStory, StoryType
 from .system_log import SystemLog
 from .faq import FAQ
 from .contact_request import ContactRequest, TicketStatus
+from .password_reset_token import PasswordResetToken

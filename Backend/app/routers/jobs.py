@@ -22,6 +22,7 @@ def _job_out(job: Job) -> JobOut:
         description=job.description,
         required_skills=list(job.required_skills or []),
         status=job.status.value,
+        rejection_reason=job.rejection_reason,
         created_at=job.created_at,
     )
 

@@ -1,0 +1,118 @@
+# GradMatch AI — Product Overview
+
+> An intelligent recruitment platform connecting verified university graduates with employers through AI-powered candidate matching.
+
+---
+
+## What Is GradMatch AI?
+
+GradMatch AI is a web-based job portal built specifically for the graduate recruitment market. Unlike general-purpose job boards, every actor on the platform — students, employers, and job listings — goes through a verification and quality-assurance layer before becoming visible to others. An AI matching engine then ranks candidates against open roles automatically, dramatically reducing the time employers spend screening applicants and increasing the relevance of opportunities that students see.
+
+---
+
+## User Roles
+
+The platform serves three distinct groups, each with a tailored experience.
+
+| Role | Who They Are |
+|---|---|
+| **Student / Graduate** | University students or recent graduates looking for full-time, part-time, internship, or contract roles |
+| **Employer** | Companies posting roles and reviewing AI-ranked candidates |
+| **Administrator** | Internal staff who moderate the platform, manage content, and handle support |
+
+---
+
+## Feature Breakdown
+
+### For Students
+
+| Feature | What It Does |
+|---|---|
+| **Account Registration** | Students sign up with their name, email, and password. The account is held in a pending state until identity is verified by an administrator. |
+| **Identity Verification** | Admin reviews the student's profile and approves or rejects it. Only verified students appear in employer candidate pipelines. |
+| **Profile Builder** | Students fill in their university, degree, graduation year, GPA, skills, and a short bio. |
+| **Resume Upload** | Students upload a PDF résumé. The platform automatically extracts and indexes skills from the document to power AI matching. |
+| **Profile Picture** | Students can upload a profile photo. |
+| **AI-Matched Job Feed** | The student's dashboard shows only jobs that are a strong match for their skills and profile, ranked by a percentage match score. |
+| **One-Click Apply** | Students apply to a job with a single click. If their identity is still being verified, the application is held in a *Pending Verification* state and becomes active automatically once approved. |
+| **Application Tracker** | A dedicated page shows every application the student has submitted, along with its current status (Pending Verification → Applied → Shortlisted → Hired / Rejected). |
+| **Password Change** | Students can change their password from within their profile at any time. |
+
+---
+
+### For Employers
+
+| Feature | What It Does |
+|---|---|
+| **Account Registration** | Employers sign up with their name, email, password, and company name. The company is held pending until verified by an administrator. |
+| **Company Verification** | Admin reviews and approves the company before it can post any jobs. |
+| **Company Profile** | Employers complete their company profile: industry, size, website, location, and description. |
+| **Job Posting** | Employers post roles specifying title, location, job type (full-time / part-time / internship / contract), required skills, salary range, and a detailed description. Each posting goes to an admin review queue before going live. |
+| **AI Candidate Pipeline** | Once a job is live, the platform automatically ranks all matching student profiles by AI score. Employers see a sorted list without having to search manually. |
+| **Candidate Profiles** | Each candidate card shows name, university, GPA, skills, an AI-generated executive summary, and a résumé snippet — enough to assess fit at a glance. |
+| **Candidate Management** | Employers move candidates through a two-stage pipeline: **Shortlist** (move to a shortlisted tab) or **Reject** (remove from the pipeline). Shortlisted candidates can later be marked as **Hired**. |
+| **Multi-Job Management** | Employers with multiple active roles can switch between them from the same dashboard. |
+
+---
+
+### For Administrators
+
+| Feature | What It Does |
+|---|---|
+| **Platform Statistics** | Live counts of verified students, verified employers, active job listings, and total AI matches made. |
+| **Moderation Queue** | A central inbox of pending approvals — student identity verifications, company registrations, and job postings. Admins approve or reject each item individually. Each item shows an AI-generated confidence score to assist the decision. |
+| **System Activity Log** | A real-time log of all significant platform actions (approvals, rejections, anomalies). |
+| **Company Explorer** | A full list of every registered company. Admins can expand any company to see all applications submitted to its jobs, including candidate details and current status. |
+| **Support Tickets** | Every message sent through the Contact Admin form creates a ticket. Admins see all tickets, can read the full message, and update each ticket's status: **Open → In Progress → Resolved**. Tickets can be filtered by status. |
+| **FAQ Management** | Admins can add, edit, and delete entries in the Help Center FAQ. Each FAQ entry has a question, a detailed answer, a category, and a display-order index. Changes appear immediately in the public Help Center. |
+| **Create Admin Accounts** | Administrators can create additional admin accounts directly from the dashboard, without going through the normal sign-up flow. |
+
+---
+
+### Platform-Wide Features
+
+| Feature | What It Does |
+|---|---|
+| **Help Center** | A publicly accessible, searchable FAQ page grouped by category (Getting Started, Resume & Profile, AI Matching, For Employers, Account). Includes quick-start guides for students and employers. |
+| **Contact Admin** | Any user (logged in or anonymous) can submit a support request. The form captures name, email, subject, and message. Submissions land in the admin support ticket queue. |
+| **Success Stories** | A curated page highlighting successful placements made through the platform. |
+| **Pricing Page** | A public page outlining platform plans and pricing for employers. |
+| **Legal Pages** | Privacy Policy and Terms of Service. |
+| **Responsive Design** | The platform works on desktop, tablet, and mobile browsers. |
+| **Role-Based Access** | Each user type can only access the pages and data relevant to their role. Attempting to reach a restricted page redirects to the appropriate screen. |
+| **Secure Authentication** | Passwords are hashed and never stored in plain text. Sessions use signed tokens that expire automatically. |
+
+---
+
+## AI Matching — How It Works
+
+When an employer posts a job, the platform's **Bidirectional Matching Engine** compares the job's required skills and description against every verified student's profile and résumé text. Using a technique called **Cosine Similarity**, it produces a percentage score representing how well each student matches the role. Employers always see the most relevant candidates first, and students only see jobs they are genuinely suited for — reducing noise for both sides.
+
+---
+
+## Technology Stack
+
+### Frontend (User Interface)
+| | |
+|---|---|
+| **Framework** | React with TypeScript |
+| **Styling** | Tailwind CSS |
+| **Animations** | Framer Motion |
+| **Routing** | React Router |
+| **Build Tool** | Vite |
+| **Charts & Icons** | Recharts, Lucide React |
+
+### Backend (Server & Database)
+| | |
+|---|---|
+| **Language** | Python |
+| **API Framework** | FastAPI |
+| **Database** | PostgreSQL |
+| **ORM** | SQLAlchemy |
+| **Authentication** | JWT (JSON Web Tokens) + bcrypt password hashing |
+| **Document Parsing** | pdfminer (PDF résumé text extraction) |
+| **Data Validation** | Pydantic |
+
+---
+
+*Document generated for internal business review. For technical implementation details, refer to the backend and frontend codebases respectively.*

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import { toast } from "sonner";
@@ -21,9 +21,13 @@ const SUBJECTS = [
 
 export function ContactAdmin() {
   const { user } = useAuth();
+  const location = useLocation();
+  const prefilledSubject = (location.state as { subject?: string } | null)?.subject;
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [subject, setSubject] = useState(SUBJECTS[0]);
+  const [subject, setSubject] = useState(
+    SUBJECTS.includes(prefilledSubject ?? "") ? prefilledSubject! : SUBJECTS[0]
+  );
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

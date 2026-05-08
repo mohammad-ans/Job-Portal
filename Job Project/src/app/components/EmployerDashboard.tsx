@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth, getAvatarUrl } from "../context/AuthContext";
 import { Link } from "react-router";
@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   Building, Plus, TrendingUp, Briefcase, Bot, Filter,
-  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown, Lock, Banknote
+  CheckCircle, XCircle, Search, Sparkles, MapPin, ChevronRight, ChevronDown, Lock, Banknote, AlertTriangle
 } from "lucide-react";
 
 interface Job {
@@ -16,6 +16,7 @@ interface Job {
   location: string;
   job_type: string;
   status: string;
+  rejection_reason: string | null;
 }
 
 interface Candidate {
@@ -35,7 +36,15 @@ interface Candidate {
 interface EmployerProfile {
   company_name: string;
   is_approved: boolean;
+  rejection_reason: string | null;
 }
+
+const JOB_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  active:   { label: "Active",   cls: "bg-emerald-100 text-emerald-700" },
+  pending:  { label: "Pending",  cls: "bg-amber-100 text-amber-700" },
+  rejected: { label: "Rejected", cls: "bg-red-100 text-red-700" },
+  closed:   { label: "Closed",   cls: "bg-slate-100 text-slate-500" },
+};
 
 export function EmployerDashboard() {
   const { user } = useAuth();
@@ -47,23 +56,31 @@ export function EmployerDashboard() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
+  const [postingJob, setPostingJob] = useState(false);
   const [jobForm, setJobForm] = useState({
     title: "", location: "", job_type: "full_time",
     salary_min: "", salary_max: "",
     required_skills: "", description: ""
   });
 
+  const fetchJobs = useCallback(() => {
+    api.get<{ items: Job[] }>("/api/v1/jobs")
+      .then((r) => {
+        setJobs(r.items);
+        if (r.items.length > 0) setSelectedJobId((prev) => prev ?? r.items[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     api.get<EmployerProfile>("/api/v1/users/me/profile")
       .then(setProfile)
       .catch(() => {});
+    fetchJobs();
 
-    api.get<{ items: Job[] }>("/api/v1/jobs")
-      .then((r) => {
-        setJobs(r.items);
-        if (r.items.length > 0) setSelectedJobId(r.items[0].id);
-      })
-      .catch(() => {});
+    const onFocus = () => { fetchJobs(); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
 
   useEffect(() => {
@@ -103,6 +120,8 @@ export function EmployerDashboard() {
 
   const handlePostJob = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (postingJob) return;
+    setPostingJob(true);
     try {
       const skills = jobForm.required_skills.split(",").map((s) => s.trim()).filter(Boolean);
       await api.post("/api/v1/jobs", {
@@ -115,17 +134,17 @@ export function EmployerDashboard() {
         salary_max: jobForm.salary_max ? parseInt(jobForm.salary_max) : null,
       });
       setShowPostingSuccess(true);
+      setJobForm({ title: "", location: "", job_type: "full_time", salary_min: "", salary_max: "", required_skills: "", description: "" });
       toast.success("Job submitted for review");
       setTimeout(() => {
         setShowPostingSuccess(false);
         setActiveTab("applicants");
-        api.get<{ items: Job[] }>("/api/v1/jobs").then((r) => {
-          setJobs(r.items);
-          if (r.items.length > 0 && !selectedJobId) setSelectedJobId(r.items[0].id);
-        }).catch(() => {});
+        fetchJobs();
       }, 3000);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to post job");
+    } finally {
+      setPostingJob(false);
     }
   };
 
@@ -169,9 +188,15 @@ export function EmployerDashboard() {
               <Building size={36} />
             </div>
             <h2 className="text-xl font-bold text-slate-900">{profile?.company_name ?? user.name}</h2>
-            <span className="mt-1 px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full uppercase tracking-wider">
-              {profile?.is_approved ? "Verified" : "Pending Review"}
+            <span className={`mt-1 px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${profile?.is_approved ? "bg-emerald-100 text-emerald-700" : profile?.rejection_reason ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+              {profile?.is_approved ? "Verified" : profile?.rejection_reason ? "Rejected" : "Pending Review"}
             </span>
+            {!profile?.is_approved && profile?.rejection_reason && (
+              <div className="mt-3 w-full flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-left">
+                <AlertTriangle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-red-700 font-medium">{profile.rejection_reason}</p>
+              </div>
+            )}
 
             <div className="mt-8 w-full pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
@@ -184,17 +209,28 @@ export function EmployerDashboard() {
               </div>
             </div>
 
-            {jobs.length > 1 && (
-              <div className="mt-4 w-full">
-                <select
-                  value={selectedJobId ?? ""}
-                  onChange={(e) => setSelectedJobId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {jobs.map((j) => (
-                    <option key={j.id} value={j.id}>{j.title}</option>
-                  ))}
-                </select>
+            {jobs.length > 0 && (
+              <div className="mt-4 w-full space-y-2">
+                {jobs.map((j) => {
+                  const badge = JOB_STATUS_BADGE[j.status] ?? JOB_STATUS_BADGE.pending;
+                  return (
+                    <button
+                      key={j.id}
+                      onClick={() => setSelectedJobId(j.id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between gap-2 ${selectedJobId === j.id ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"}`}
+                    >
+                      <span className="text-sm font-semibold text-slate-800 truncate">{j.title}</span>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>{badge.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedJob?.status === "rejected" && selectedJob.rejection_reason && (
+              <div className="mt-3 w-full flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-left">
+                <AlertTriangle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-red-700 font-medium">{selectedJob.rejection_reason}</p>
               </div>
             )}
           </div>
@@ -489,8 +525,8 @@ export function EmployerDashboard() {
                   </div>
 
                   <div className="pt-6 border-t border-slate-100 flex justify-end">
-                    <button type="submit" className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2">
-                      <Plus size={20} /> Publish & Start Matching
+                    <button type="submit" disabled={postingJob} className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                      <Plus size={20} /> {postingJob ? "Submitting…" : "Publish & Start Matching"}
                     </button>
                   </div>
                 </form>

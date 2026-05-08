@@ -47,7 +47,9 @@ class Job(Base):
         default=JobStatus.pending,
         server_default="pending",
     )
+    rejection_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,

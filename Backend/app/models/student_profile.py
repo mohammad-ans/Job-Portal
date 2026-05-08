@@ -25,6 +25,9 @@ class StudentProfile(Base):
     resume_text = Column(Text, nullable=True)
     bio = Column(Text, nullable=True)
     is_approved = Column(Boolean, nullable=False, default=False)
+    rejection_count = Column(Integer, nullable=False, default=0, server_default="0")
+    rejection_reason = Column(Text, nullable=True)
+    is_closed = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),

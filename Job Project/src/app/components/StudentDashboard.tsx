@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import api from "../lib/api";
 import {
   UploadCloud, FileText, CheckCircle, Bot, Search, Briefcase,
-  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award, ClipboardList, Clock
+  MapPin, Building, GraduationCap, Sparkles, ChevronDown, ChevronUp, Award, ClipboardList, Clock,
+  AlertTriangle, XCircle, RefreshCw
 } from "lucide-react";
 
 interface StudentProfile {
@@ -16,6 +17,10 @@ interface StudentProfile {
   graduation_year: number | null;
   skills: string[];
   resume_url: string | null;
+  is_approved: boolean;
+  rejection_count: number;
+  rejection_reason: string | null;
+  is_closed: boolean;
 }
 
 interface JobMatch {
@@ -51,6 +56,7 @@ export function StudentDashboard() {
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobMatch[]>([]);
   const [appliedStatuses, setAppliedStatuses] = useState<Map<string, string>>(new Map());
+  const [reVerifying, setReVerifying] = useState(false);
 
   const fetchProfile = useCallback(() => {
     api.get<StudentProfile>("/api/v1/users/me/profile")
@@ -71,7 +77,10 @@ export function StudentDashboard() {
 
   const fetchApplied = useCallback(() => {
     api.get<{ items: { job_id: string; status: string }[] }>("/api/v1/applications/me")
-      .then((r) => setAppliedStatuses(new Map(r.items.map((a) => [a.job_id, a.status]))))
+      .then((r) => {
+        const active = r.items.filter((a) => a.status !== "matched");
+        setAppliedStatuses(new Map(active.map((a) => [a.job_id, a.status])));
+      })
       .catch(() => {});
   }, []);
 
@@ -79,7 +88,24 @@ export function StudentDashboard() {
     fetchProfile();
     fetchMatches();
     fetchApplied();
+
+    const onFocus = () => { fetchProfile(); fetchApplied(); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
+
+  const handleReVerify = async () => {
+    setReVerifying(true);
+    try {
+      await api.post("/api/v1/users/me/re-verify");
+      toast.success("Re-verification request submitted. An admin will review your profile.");
+      fetchProfile();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setReVerifying(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
@@ -170,6 +196,44 @@ export function StudentDashboard() {
           <ClipboardList size={18} className="text-indigo-500" /> My Applications
         </Link>
       </div>
+
+      {profile?.is_closed && (
+        <div className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-5">
+          <XCircle size={22} className="text-red-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-bold text-red-800">Account Permanently Closed</p>
+            <p className="text-sm text-red-700 mt-1">
+              Your profile was rejected twice and has been permanently closed. Please{" "}
+              <Link to="/contact-admin" className="underline font-bold">contact admin</Link> if you believe this is an error.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!profile?.is_closed && !profile?.is_approved && profile?.rejection_count !== undefined && profile.rejection_count > 0 && (
+        <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+          <AlertTriangle size={22} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-grow">
+            <p className="font-bold text-amber-800">
+              Profile Rejected ({profile.rejection_count}/2 attempt{profile.rejection_count > 1 ? "s" : ""} used)
+            </p>
+            {profile.rejection_reason && (
+              <p className="text-sm text-amber-700 mt-1">Reason: {profile.rejection_reason}</p>
+            )}
+            <p className="text-sm text-amber-600 mt-2">
+              Update your profile and re-submit for verification. One more rejection will permanently close your account.
+            </p>
+          </div>
+          <button
+            onClick={handleReVerify}
+            disabled={reVerifying}
+            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={reVerifying ? "animate-spin" : ""} />
+            {reVerifying ? "Submitting…" : "Re-submit"}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column */}

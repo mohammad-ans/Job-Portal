@@ -153,6 +153,18 @@ export function AdminConsole() {
   const [newFaq, setNewFaq] = useState({ question: "", answer: "", category: "Getting Started", order_index: 0 });
   const [savingFaq, setSavingFaq] = useState(false);
 
+  // Reject modal
+  const [rejectModalId, setRejectModalId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const refreshStats = () => {
+    api.get<Stats>("/api/v1/admin/stats").then(setStats).catch(() => {});
+  };
+
+  const refreshLogs = () => {
+    api.get<{ items: SystemLog[] }>("/api/v1/admin/logs").then((l) => setLogs(l.items)).catch(() => {});
+  };
+
   useEffect(() => {
     if (!user || user.role !== "admin") return;
     Promise.all([
@@ -170,6 +182,12 @@ export function AdminConsole() {
       .catch(() => toast.error("Failed to load admin data"))
       .finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab !== "queue") return;
+    const id = setInterval(refreshLogs, 15000);
+    return () => clearInterval(id);
+  }, [activeTab]);
 
   const fetchTickets = async (filter = ticketFilter) => {
     const qs = filter !== "all" ? `?status=${filter}` : "";
@@ -288,18 +306,31 @@ export function AdminConsole() {
       await api.post(`/api/v1/admin/approvals/${id}/approve`);
       setApprovals((prev) => prev.filter((a) => a.id !== id));
       toast.success("Approved successfully");
+      refreshStats();
+      refreshLogs();
     } catch {
       toast.error("Failed to approve");
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleRejectClick = (id: string) => {
+    setRejectModalId(id);
+    setRejectReason("");
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectModalId) return;
     try {
-      await api.post(`/api/v1/admin/approvals/${id}/reject`, { reason: "Rejected by admin" });
-      setApprovals((prev) => prev.filter((a) => a.id !== id));
+      await api.post(`/api/v1/admin/approvals/${rejectModalId}/reject`, { reason: rejectReason || undefined });
+      setApprovals((prev) => prev.filter((a) => a.id !== rejectModalId));
       toast.success("Rejected");
+      refreshStats();
+      refreshLogs();
     } catch {
       toast.error("Failed to reject");
+    } finally {
+      setRejectModalId(null);
+      setRejectReason("");
     }
   };
 
@@ -471,11 +502,11 @@ export function AdminConsole() {
 
                     <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                       <button
-                        onClick={() => handleReject(item.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-medium border border-transparent hover:border-rose-200"
+                        onClick={() => handleRejectClick(item.id)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-bold text-sm border border-slate-200 hover:border-rose-200"
                         title="Reject"
                       >
-                        <X size={20} />
+                        <X size={16} /> Reject
                       </button>
                       <button
                         onClick={() => handleApprove(item.id)}
@@ -974,6 +1005,53 @@ export function AdminConsole() {
           </div>
         </div>
       )}
+      {/* Reject reason modal */}
+      <AnimatePresence>
+        {rejectModalId && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+            onClick={() => setRejectModalId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-rose-100 p-2.5 rounded-xl text-rose-600"><X size={20} /></div>
+                <h2 className="text-xl font-extrabold text-slate-900">Reject with Reason</h2>
+              </div>
+              <div className="space-y-3 mb-6">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Reason <span className="normal-case font-medium text-slate-400">(shown to the user)</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="e.g. Incomplete profile information, invalid university email…"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 resize-none font-medium text-sm"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmReject}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-md"
+                >
+                  Confirm Rejection
+                </button>
+                <button
+                  onClick={() => setRejectModalId(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

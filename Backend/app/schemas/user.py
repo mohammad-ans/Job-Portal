@@ -30,6 +30,9 @@ class StudentProfileOut(BaseModel):
     resume_url: Optional[str] = None
     bio: Optional[str] = None
     is_approved: bool
+    rejection_count: int = 0
+    rejection_reason: Optional[str] = None
+    is_closed: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -46,6 +49,7 @@ class EmployerProfileOut(BaseModel):
     location: Optional[str] = None
     description: Optional[str] = None
     is_approved: bool
+    rejection_reason: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

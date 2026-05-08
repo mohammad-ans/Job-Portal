@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.user import User
 from app.models.student_profile import StudentProfile
 from app.models.employer_profile import EmployerProfile
+from app.models.approval import Approval, ApprovalType, ApprovalStatus
 from app.schemas.user import (
     StudentProfileOut, EmployerProfileOut, UserOut, ProfilePatch,
     ResumeUploadOut, PasswordChangeRequest, AvatarUploadOut
@@ -37,6 +38,9 @@ def _student_out(profile: StudentProfile) -> StudentProfileOut:
         resume_url=profile.resume_url,
         bio=profile.bio,
         is_approved=profile.is_approved,
+        rejection_count=profile.rejection_count or 0,
+        rejection_reason=profile.rejection_reason,
+        is_closed=profile.is_closed or False,
     )
 
 
@@ -53,6 +57,7 @@ def _employer_out(profile: EmployerProfile) -> EmployerProfileOut:
         location=profile.location,
         description=profile.description,
         is_approved=profile.is_approved,
+        rejection_reason=profile.rejection_reason,
     )
 
 
@@ -202,3 +207,44 @@ def upload_avatar(
     user.avatar_url = f"/uploads/avatars/{filename}"
     db.commit()
     return AvatarUploadOut(avatar_url=user.avatar_url)
+
+
+@router.post("/me/re-verify", status_code=200)
+def request_re_verification(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if user.role.value != "student":
+        raise HTTPException(403, "Only students can request re-verification")
+
+    profile = db.query(StudentProfile).filter(StudentProfile.user_id == user.id).first()
+    if not profile:
+        raise HTTPException(404, "Student profile not found")
+    if profile.is_closed:
+        raise HTTPException(403, "Account is permanently closed after repeated rejections")
+    if profile.is_approved:
+        raise HTTPException(400, "Profile is already approved")
+    if profile.rejection_count == 0:
+        raise HTTPException(400, "No rejection on record — nothing to re-verify")
+
+    # Clear rejection state and re-submit for approval
+    profile.rejection_reason = None
+    profile.is_approved = False
+
+    existing = db.query(Approval).filter(
+        Approval.target_type == ApprovalType.student_verification,
+        Approval.target_id == profile.id,
+        Approval.status == ApprovalStatus.pending,
+    ).first()
+    if not existing:
+        db.add(Approval(
+            target_type=ApprovalType.student_verification,
+            target_id=profile.id,
+            name=user.name,
+            ai_confidence=80,
+            flags=0,
+            status=ApprovalStatus.pending,
+        ))
+
+    db.commit()
+    return {"message": "Re-verification request submitted. An admin will review your profile."}

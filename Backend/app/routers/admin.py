@@ -159,6 +159,29 @@ def reject(
     if body.reason:
         approval.flag_reason = body.reason
 
+    if approval.target_type == ApprovalType.job:
+        job = db.query(Job).filter(Job.id == approval.target_id).first()
+        if job:
+            job.status = JobStatus.rejected
+            job.rejection_reason = body.reason
+
+    elif approval.target_type == ApprovalType.company:
+        profile = db.query(EmployerProfile).filter(
+            EmployerProfile.id == approval.target_id
+        ).first()
+        if profile:
+            profile.rejection_reason = body.reason
+
+    elif approval.target_type == ApprovalType.student_verification:
+        profile = db.query(StudentProfile).filter(
+            StudentProfile.id == approval.target_id
+        ).first()
+        if profile:
+            profile.rejection_count = (profile.rejection_count or 0) + 1
+            profile.rejection_reason = body.reason
+            if profile.rejection_count >= 2:
+                profile.is_closed = True
+
     _write_log(
         db,
         f"Rejected {approval.target_type.value}: {approval.name}",

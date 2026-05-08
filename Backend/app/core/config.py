@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str
     RESUME_UPLOAD_DIR: str
     MAX_RESUME_MB: int
+    RESEND_API_KEY: str
+    RESEND_FROM: str
+    FRONTEND_URL: str
 
     @property
     def cors_origins_list(self) -> List[str]:

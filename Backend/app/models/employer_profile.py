@@ -23,6 +23,7 @@ class EmployerProfile(Base):
     location = Column(String(200), nullable=True)
     description = Column(Text, nullable=True)
     is_approved = Column(Boolean, nullable=False, default=False)
+    rejection_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),

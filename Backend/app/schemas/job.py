@@ -51,6 +51,7 @@ class JobOut(BaseModel):
     description: str
     required_skills: List[str] = []
     status: str
+    rejection_reason: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

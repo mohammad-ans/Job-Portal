@@ -12,6 +12,8 @@ import { TermsOfService } from "./components/TermsOfService";
 import { HelpCenter } from "./components/HelpCenter";
 import { ContactAdmin } from "./components/ContactAdmin";
 import { Login, SignUp } from "./components/Auth";
+import { ForgotPassword } from "./components/ForgotPassword";
+import { ResetPassword } from "./components/ResetPassword";
 import { Profile } from "./components/Profile";
 import { MyApplications } from "./components/MyApplications";
 import { DevLogin } from "./components/DevLogin";
@@ -59,6 +61,8 @@ export const router = createBrowserRouter([
       { path: "contact-admin", Component: ContactAdmin },
       { path: "login", Component: Login },
       { path: "signup", Component: SignUp },
+      { path: "forgot-password", Component: ForgotPassword },
+      { path: "reset-password", Component: ResetPassword },
       { path: "dev", Component: DevLogin },
     ],
   },

@@ -37,6 +37,7 @@ interface JobMatch {
   ai_reason: string | null;
   desc_snippet: string;
   status: string;
+  hired_count: number;
 }
 
 const JOB_TYPE_LABELS: Record<string, string> = {
@@ -426,6 +427,11 @@ export function StudentDashboard() {
                                 <span className="flex items-center gap-1"><MapPin size={16} className="text-slate-400" /> {job.location}</span>
                                 <span className="flex items-center gap-1"><Briefcase size={16} className="text-slate-400" /> {JOB_TYPE_LABELS[job.job_type] ?? job.job_type}</span>
                                 <span className="hidden sm:inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{salaryLabel(job)}</span>
+                                {job.hired_count > 0 && (
+                                  <span className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-semibold">
+                                    <CheckCircle size={13} className="text-indigo-400" /> {job.hired_count} hired
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="flex flex-row sm:flex-col items-center sm:items-end w-full sm:w-auto justify-between sm:justify-start pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 mt-2 sm:mt-0">

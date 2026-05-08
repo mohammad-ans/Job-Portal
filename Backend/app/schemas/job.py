@@ -61,6 +61,7 @@ class JobMatchOut(JobOut):
     match_score: float
     ai_reason: Optional[str] = None
     desc_snippet: str
+    hired_count: int = 0
 
 
 class JobListOut(BaseModel):

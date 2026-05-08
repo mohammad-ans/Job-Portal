@@ -1,9 +1,18 @@
 import { motion } from "motion/react";
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, X, Construction } from "lucide-react";
 
 export function Pricing() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+      {/* Under Development Banner */}
+      <div className="mb-10 flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 shadow-sm">
+        <Construction size={24} className="text-amber-500 flex-shrink-0" />
+        <div>
+          <p className="font-bold text-amber-800 text-sm">This page is under development</p>
+          <p className="text-amber-700 text-xs mt-0.5">Billing and payment features are not yet active. The plans shown below are for illustration purposes only.</p>
+        </div>
+      </div>
+
       <div className="text-center max-w-3xl mx-auto mb-16">
         <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Simple, Transparent Pricing</h1>
         <p className="text-lg text-slate-600">Start matching instantly. No hidden fees or complex contracts.</p>
@@ -29,7 +38,7 @@ export function Pricing() {
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-500" size={20} /> <span className="text-slate-600">AI Match Insights</span></li>
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-500" size={20} /> <span className="text-slate-600">Apply to Unlimited Jobs</span></li>
           </ul>
-          <button className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">Get Started Free</button>
+          <button disabled className="w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-xl cursor-not-allowed">Coming Soon</button>
         </motion.div>
 
         {/* Employer Pro Plan */}
@@ -53,7 +62,7 @@ export function Pricing() {
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-400" size={20} /> <span>Advanced NLP Matching</span></li>
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-400" size={20} /> <span>Candidate Filtering & Analytics</span></li>
           </ul>
-          <button className="w-full py-3 bg-white hover:bg-indigo-50 text-indigo-600 font-bold rounded-xl transition-colors relative z-10">Start 14-Day Trial</button>
+          <button disabled className="w-full py-3 bg-indigo-400/50 text-indigo-100 font-bold rounded-xl cursor-not-allowed relative z-10">Coming Soon</button>
         </motion.div>
 
         {/* Enterprise Plan */}
@@ -75,7 +84,7 @@ export function Pricing() {
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-500" size={20} /> <span className="text-slate-600">Dedicated Account Manager</span></li>
             <li className="flex items-center gap-3"><CheckCircle2 className="text-emerald-500" size={20} /> <span className="text-slate-600">Custom ATS Integrations</span></li>
           </ul>
-          <button className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold rounded-xl transition-colors mt-auto">Contact Sales</button>
+          <button disabled className="w-full py-3 bg-slate-200 text-slate-400 font-bold rounded-xl cursor-not-allowed mt-auto">Coming Soon</button>
         </motion.div>
       </div>
     </div>

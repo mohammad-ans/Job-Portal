@@ -97,6 +97,12 @@ def get_job_matches(
 
     applications = compute_matches(profile, db, limit=limit)
 
+    def _hired_count(job_id) -> int:
+        return db.query(Application).filter(
+            Application.job_id == job_id,
+            Application.status == ApplicationStatus.hired,
+        ).count()
+
     return {"items": [
         JobMatchOut(
             id=app.job.id,
@@ -113,6 +119,7 @@ def get_job_matches(
             match_score=float(app.match_score),
             ai_reason=app.ai_reason,
             desc_snippet=_desc_snippet(app.job.description),
+            hired_count=_hired_count(app.job.id),
         )
         for app in applications
     ]}
@@ -133,6 +140,12 @@ def recompute_matches(
 
     applications = compute_matches(profile, db, limit=limit)
 
+    def _hired_count(job_id) -> int:
+        return db.query(Application).filter(
+            Application.job_id == job_id,
+            Application.status == ApplicationStatus.hired,
+        ).count()
+
     return {"items": [
         JobMatchOut(
             id=app.job.id,
@@ -149,6 +162,7 @@ def recompute_matches(
             match_score=float(app.match_score),
             ai_reason=app.ai_reason,
             desc_snippet=_desc_snippet(app.job.description),
+            hired_count=_hired_count(app.job.id),
         )
         for app in applications
     ]}
@@ -219,6 +233,7 @@ def get_employer_stats(
 
     total_candidates = 0
     total_hired = 0
+    total_rejected = 0
     if job_ids:
         total_candidates = (
             db.query(Application)
@@ -237,9 +252,18 @@ def get_employer_stats(
             )
             .count()
         )
+        total_rejected = (
+            db.query(Application)
+            .filter(
+                Application.job_id.in_(job_ids),
+                Application.status == ApplicationStatus.rejected,
+            )
+            .count()
+        )
 
     return {
         "total_candidates": total_candidates,
         "total_hired": total_hired,
+        "total_rejected": total_rejected,
         "total_jobs": len(job_ids),
     }

@@ -49,7 +49,7 @@ const JOB_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 export function EmployerDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"applicants" | "post">("applicants");
-  const [candidateTab, setCandidateTab] = useState<"pending" | "shortlisted">("pending");
+  const [candidateTab, setCandidateTab] = useState<"pending" | "shortlisted" | "hired">("pending");
   const [showPostingSuccess, setShowPostingSuccess] = useState(false);
   const [expandedApplicant, setExpandedApplicant] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -57,7 +57,7 @@ export function EmployerDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
   const [postingJob, setPostingJob] = useState(false);
-  const [employerStats, setEmployerStats] = useState<{ total_candidates: number; total_hired: number } | null>(null);
+  const [employerStats, setEmployerStats] = useState<{ total_candidates: number; total_hired: number; total_rejected: number } | null>(null);
   const [jobForm, setJobForm] = useState({
     title: "", location: "", job_type: "full_time",
     salary_min: "", salary_max: "",
@@ -97,25 +97,25 @@ export function EmployerDashboard() {
   const pendingCandidates = candidates.filter(
     (c) => c.status !== "shortlisted" && c.status !== "hired" && c.status !== "rejected"
   );
-  const shortlistedCandidates = candidates.filter(
-    (c) => c.status === "shortlisted" || c.status === "hired"
-  );
+  const shortlistedCandidates = candidates.filter((c) => c.status === "shortlisted");
+  const hiredCandidates = candidates.filter((c) => c.status === "hired");
+  const rejectedCount = candidates.filter((c) => c.status === "rejected").length;
 
   const handleStatusUpdate = async (applicationId: string, status: string) => {
     try {
       await api.patch(`/api/v1/applications/${applicationId}/status`, { status });
+      setCandidates((prev) =>
+        prev.map((c) => c.application_id === applicationId ? { ...c, status } : c)
+      );
+      setExpandedApplicant(null);
       if (status === "rejected") {
-        setCandidates((prev) => prev.filter((c) => c.application_id !== applicationId));
-        setExpandedApplicant(null);
-        toast.success("Candidate rejected and removed");
-      } else {
-        setCandidates((prev) =>
-          prev.map((c) => c.application_id === applicationId ? { ...c, status } : c)
-        );
-        if (status === "shortlisted") {
-          setCandidateTab("shortlisted");
-          toast.success("Candidate shortlisted");
-        }
+        toast.success("Candidate rejected");
+      } else if (status === "shortlisted") {
+        setCandidateTab("shortlisted");
+        toast.success("Candidate shortlisted");
+      } else if (status === "hired") {
+        setCandidateTab("hired");
+        toast.success("Candidate marked as hired");
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to update status");
@@ -202,7 +202,7 @@ export function EmployerDashboard() {
               </div>
             )}
 
-            <div className="mt-8 w-full pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+            <div className="mt-8 w-full pt-6 border-t border-slate-100 grid grid-cols-2 gap-3">
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                 <p className="text-3xl font-black text-slate-800 mb-1">{jobs.filter(j => j.status === "active").length}</p>
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Active Jobs</p>
@@ -210,6 +210,14 @@ export function EmployerDashboard() {
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
                 <p className="text-3xl font-black text-emerald-600 mb-1">{shortlistedCandidates.length}</p>
                 <p className="text-[10px] text-emerald-600/80 font-bold uppercase tracking-wider">Shortlisted</p>
+              </div>
+              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+                <p className="text-3xl font-black text-indigo-600 mb-1">{hiredCandidates.length}</p>
+                <p className="text-[10px] text-indigo-600/80 font-bold uppercase tracking-wider">Hired</p>
+              </div>
+              <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100">
+                <p className="text-3xl font-black text-rose-500 mb-1">{rejectedCount}</p>
+                <p className="text-[10px] text-rose-500/80 font-bold uppercase tracking-wider">Rejected</p>
               </div>
             </div>
 
@@ -285,7 +293,7 @@ export function EmployerDashboard() {
                     </button>
                   </div>
                 </div>
-                <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+                <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
                   <button
                     onClick={() => setCandidateTab("pending")}
                     className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${candidateTab === "pending" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
@@ -304,19 +312,28 @@ export function EmployerDashboard() {
                       {shortlistedCandidates.length}
                     </span>
                   </button>
+                  <button
+                    onClick={() => setCandidateTab("hired")}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${candidateTab === "hired" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    Hired
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-black ${candidateTab === "hired" ? "bg-indigo-100 text-indigo-700" : "bg-slate-200 text-slate-500"}`}>
+                      {hiredCandidates.length}
+                    </span>
+                  </button>
                 </div>
               </div>
 
               <div className="divide-y divide-slate-100 flex-grow">
-                {(candidateTab === "pending" ? pendingCandidates : shortlistedCandidates).length === 0 ? (
+                {(candidateTab === "pending" ? pendingCandidates : candidateTab === "shortlisted" ? shortlistedCandidates : hiredCandidates).length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-16 text-slate-400">
                     <Bot size={48} className="mb-4 opacity-40" />
                     <p className="font-semibold">
-                      {candidateTab === "pending" ? "No pending candidates for this job" : "No shortlisted candidates yet"}
+                      {candidateTab === "pending" ? "No pending candidates for this job" : candidateTab === "shortlisted" ? "No shortlisted candidates yet" : "No hired candidates yet"}
                     </p>
                   </div>
                 ) : (
-                  (candidateTab === "pending" ? pendingCandidates : shortlistedCandidates).map((applicant, index) => {
+                  (candidateTab === "pending" ? pendingCandidates : candidateTab === "shortlisted" ? shortlistedCandidates : hiredCandidates).map((applicant, index) => {
                     const isExpanded = expandedApplicant === applicant.application_id;
                     const avatar = applicant.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(applicant.name)}&background=6366f1&color=fff&size=256`;
                     return (
@@ -398,24 +415,31 @@ export function EmployerDashboard() {
                                       <CheckCircle size={14} /> Shortlisted
                                     </span>
                                   )}
-                                  <div className="flex items-center gap-3 ml-auto">
-                                    <button onClick={() => handleStatusUpdate(applicant.application_id, "rejected")}
-                                      className="px-5 py-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 font-bold text-sm rounded-xl transition-colors flex items-center gap-1">
-                                      <XCircle size={16} /> Reject
-                                    </button>
-                                    {candidateTab === "pending" && (
-                                      <button onClick={() => handleStatusUpdate(applicant.application_id, "shortlisted")}
-                                        className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
-                                        <CheckCircle size={16} /> Shortlist
+                                  {candidateTab === "hired" && (
+                                    <span className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 border border-indigo-100 text-xs font-bold px-3 py-1.5 rounded-lg">
+                                      <Sparkles size={14} /> Hired
+                                    </span>
+                                  )}
+                                  {candidateTab !== "hired" && (
+                                    <div className="flex items-center gap-3 ml-auto">
+                                      <button onClick={() => handleStatusUpdate(applicant.application_id, "rejected")}
+                                        className="px-5 py-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 font-bold text-sm rounded-xl transition-colors flex items-center gap-1">
+                                        <XCircle size={16} /> Reject
                                       </button>
-                                    )}
-                                    {candidateTab === "shortlisted" && (
-                                      <button onClick={() => handleStatusUpdate(applicant.application_id, "hired")}
-                                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
-                                        <CheckCircle size={16} /> Mark as Hired
-                                      </button>
-                                    )}
-                                  </div>
+                                      {candidateTab === "pending" && (
+                                        <button onClick={() => handleStatusUpdate(applicant.application_id, "shortlisted")}
+                                          className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
+                                          <CheckCircle size={16} /> Shortlist
+                                        </button>
+                                      )}
+                                      {candidateTab === "shortlisted" && (
+                                        <button onClick={() => handleStatusUpdate(applicant.application_id, "hired")}
+                                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-colors shadow-md flex items-center gap-1">
+                                          <CheckCircle size={16} /> Mark as Hired
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </motion.div>

@@ -327,13 +327,22 @@ export function EmployerDashboard() {
                           <div className="flex items-center gap-5">
                             <img src={avatar} alt={applicant.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm" />
                             <div>
-                              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 flex-wrap">
                                 {applicant.name}
                                 {applicant.match_score >= 90 && (
                                   <span className="bg-emerald-100 text-emerald-700 text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded flex items-center gap-1">
                                     <Sparkles size={10} /> Top Match
                                   </span>
                                 )}
+                                {applicant.status === "applied" ? (
+                                  <span className="bg-indigo-100 text-indigo-700 text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded">
+                                    Applied
+                                  </span>
+                                ) : applicant.status === "matched" ? (
+                                  <span className="bg-slate-100 text-slate-500 text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded">
+                                    AI Suggested
+                                  </span>
+                                ) : null}
                               </h3>
                               <div className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-3">
                                 {applicant.university && <span>{applicant.university}</span>}
@@ -427,7 +436,7 @@ export function EmployerDashboard() {
                 <div className="bg-indigo-100 p-3 rounded-2xl text-indigo-600 shadow-inner"><Plus size={28} /></div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900">Create New Requisition</h2>
-                  <p className="text-slate-500 font-medium mt-1">Our NLP engine will analyse your description to find perfect matches.</p>
+                  <p className="text-slate-500 font-medium mt-1">Our AI engine will semantically match your description against candidate profiles.</p>
                 </div>
               </div>
 

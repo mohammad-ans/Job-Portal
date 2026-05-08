@@ -177,7 +177,6 @@ def get_candidates(
         .filter(
             Application.job_id == job_id,
             Application.status != ApplicationStatus.pending_verification,
-            Application.status != ApplicationStatus.matched,
         )
         .order_by(Application.match_score.desc())
         .limit(limit)

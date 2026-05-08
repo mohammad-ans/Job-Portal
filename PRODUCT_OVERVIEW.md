@@ -29,7 +29,7 @@ The platform serves three distinct groups, each with a tailored experience.
 | Feature | What It Does |
 |---|---|
 | **Account Registration** | Students sign up with their name, email, and password. The account is held in a pending state until identity is verified by an administrator. |
-| **Identity Verification** | Admin reviews the student's profile and approves or rejects it. Only verified students appear in employer candidate pipelines. |
+| **Identity Verification** | Admin reviews the student's profile and approves or rejects it. If rejected, the student receives a reason and may re-submit for review once. A second rejection permanently closes the account. Only verified students appear in employer candidate pipelines. |
 | **Profile Builder** | Students fill in their university, degree, graduation year, GPA, skills, and a short bio. |
 | **Resume Upload** | Students upload a PDF résumé. The platform automatically extracts and indexes skills from the document to power AI matching. |
 | **Profile Picture** | Students can upload a profile photo. |
@@ -37,6 +37,7 @@ The platform serves three distinct groups, each with a tailored experience.
 | **One-Click Apply** | Students apply to a job with a single click. If their identity is still being verified, the application is held in a *Pending Verification* state and becomes active automatically once approved. |
 | **Application Tracker** | A dedicated page shows every application the student has submitted, along with its current status (Pending Verification → Applied → Shortlisted → Hired / Rejected). |
 | **Password Change** | Students can change their password from within their profile at any time. |
+| **Password Reset** | Students who forget their password can request a reset link via email. A time-limited token is sent through Resend; following the link lets the student set a new password securely. |
 
 ---
 

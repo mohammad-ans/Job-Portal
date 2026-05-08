@@ -89,7 +89,10 @@ def my_applications(
 
     applications = (
         db.query(Application)
-        .filter(Application.student_id == profile.id)
+        .filter(
+            Application.student_id == profile.id,
+            Application.status != ApplicationStatus.matched,
+        )
         .order_by(Application.created_at.desc())
         .all()
     )

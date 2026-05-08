@@ -78,8 +78,7 @@ export function StudentDashboard() {
   const fetchApplied = useCallback(() => {
     api.get<{ items: { job_id: string; status: string }[] }>("/api/v1/applications/me")
       .then((r) => {
-        const active = r.items.filter((a) => a.status !== "matched");
-        setAppliedStatuses(new Map(active.map((a) => [a.job_id, a.status])));
+        setAppliedStatuses(new Map(r.items.map((a) => [a.job_id, a.status])));
       })
       .catch(() => {});
   }, []);
